@@ -848,25 +848,28 @@ export default function EquipmentPage() {
   );
 }
 
-function AddEquipmentDialog({
+export function AddEquipmentDialog({
   open,
   onOpenChange,
   departments,
   queryClient,
   toast,
+  editingEquipment,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: Department[];
   queryClient: ReturnType<typeof useQueryClient>;
   toast: ReturnType<typeof useToast>["toast"];
+  editingEquipment?: Equipment;
 }) {
   const [activeTab, setActiveTab] = useState("details");
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>(editingEquipment || {});
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditMode = !!editingEquipment;
 
   const handleFormChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -899,15 +902,24 @@ function AddEquipmentDialog({
         }
       });
 
-      await api.equipment.create(submitData);
-
-      // Invalidate equipment query to refetch
-      queryClient.invalidateQueries({ queryKey: ["equipment"] });
-
-      toast({
-        title: "Success",
-        description: "Equipment added successfully!",
-      });
+      if (isEditMode && editingEquipment) {
+        // Update existing equipment
+        await api.equipment.update(editingEquipment.id, submitData);
+        queryClient.invalidateQueries({ queryKey: ["equipment", editingEquipment.id] });
+        queryClient.invalidateQueries({ queryKey: ["equipment"] });
+        toast({
+          title: "Success",
+          description: "Equipment updated successfully!",
+        });
+      } else {
+        // Create new equipment
+        await api.equipment.create(submitData);
+        queryClient.invalidateQueries({ queryKey: ["equipment"] });
+        toast({
+          title: "Success",
+          description: "Equipment added successfully!",
+        });
+      }
 
       onOpenChange(false);
       // Reset form
@@ -916,11 +928,11 @@ function AddEquipmentDialog({
       setSelectedDepartment(null);
       setActiveTab("details");
     } catch (error) {
-      console.error("Error creating equipment:", error);
+      console.error("Error saving equipment:", error);
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to add equipment",
+          error instanceof Error ? error.message : "Failed to save equipment",
         variant: "destructive",
       });
     } finally {
@@ -934,10 +946,13 @@ function AddEquipmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Add Equipment</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {isEditMode ? "Edit Equipment" : "Add Equipment"}
+          </DialogTitle>
           <DialogDescription>
-            Enter the equipment details below. Required fields are marked with
-            an asterisk (*).
+            {isEditMode
+              ? "Update the equipment details below."
+              : "Enter the equipment details below. Required fields are marked with an asterisk (*)."}
           </DialogDescription>
         </DialogHeader>
 
@@ -1429,8 +1444,10 @@ function AddEquipmentDialog({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
+              ) : isEditMode ? (
+                "Save Changes"
               ) : (
-                "Save Equipment"
+                "Add Equipment"
               )}
             </Button>
           ) : (

@@ -60,9 +60,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Equipment } from "@/types/equipment";
 import type { MaintenanceRecord } from "@/types/maintenance";
+import type { Department } from "@/types/dashboard";
 import { MaintenanceLogDialog } from "@/components/maintenance-log-dialog";
 import { MaintenanceTimeline } from "@/components/maintenance-timeline";
 import { toast as sonnerToast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { AddEquipmentDialog } from "@/app/equipment/page";
 
 export default function EquipmentDetailPage({
   params,
@@ -72,6 +75,7 @@ export default function EquipmentDetailPage({
   const { id } = use(params);
   const equipmentId = parseInt(id);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
   const [isUploadDocDialogOpen, setIsUploadDocDialogOpen] = useState(false);
@@ -84,6 +88,12 @@ export default function EquipmentDetailPage({
   const { data: equipment, isLoading } = useQuery<Equipment>({
     queryKey: ["equipment", equipmentId],
     queryFn: () => api.equipment.getById(equipmentId),
+  });
+
+  // Fetch departments
+  const { data: departments = [] } = useQuery<Department[]>({
+    queryKey: ["departments"],
+    queryFn: () => api.departments.list(),
   });
 
   // Fetch maintenance records for this equipment
@@ -185,14 +195,30 @@ export default function EquipmentDetailPage({
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
               <Link href="/equipment">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back
                 </Button>
               </Link>
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditDialogOpen(true)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-start justify-between mt-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   {equipment.name}
@@ -203,164 +229,60 @@ export default function EquipmentDetailPage({
                   {equipment.model || ""}
                 </p>
               </div>
-              <DropdownMenu
-                open={isStatusMenuOpen}
-                onOpenChange={setIsStatusMenuOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Badge
-                    className={`${getStatusColor(
-                      equipment.status || "unknown"
-                    )} cursor-pointer hover:opacity-80`}
-                  >
-                    {equipment.status
-                      ? equipment.status.charAt(0).toUpperCase() +
-                        equipment.status.slice(1)
-                      : "Unknown"}
-                  </Badge>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {["operational", "maintenance", "broken", "retired"].map(
-                    (status) => {
-                      const isCurrentStatus = equipment.status === status;
-                      const getTextColor = (s: string) => {
-                        switch (s.toLowerCase()) {
-                          case "operational":
-                            return "text-green-600";
-                          case "maintenance":
-                            return "text-yellow-600";
-                          case "broken":
-                            return "text-red-600";
-                          case "retired":
-                            return "text-gray-600";
-                          default:
-                            return "text-gray-600";
-                        }
-                      };
-                      return (
-                        <DropdownMenuItem
-                          key={status}
-                          onClick={() => handleStatusUpdate(status)}
-                          className={`flex items-center justify-between cursor-pointer ${
-                            isCurrentStatus ? "bg-gray-100" : ""
-                          }`}
-                        >
-                          <span className={getTextColor(status)}>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                            {isCurrentStatus && " ✓"}
-                          </span>
-                        </DropdownMenuItem>
-                      );
-                    }
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Dialog
-                open={isEditDialogOpen}
-                onOpenChange={setIsEditDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Edit Equipment - {equipment.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-3 gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Equipment Name</Label>
-                      <Input id="name" defaultValue={equipment.name} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tagNumber">Tag Number</Label>
-                      <Input
-                        id="tagNumber"
-                        defaultValue={equipment.tag_number}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="serial">Serial Number</Label>
-                      <Input
-                        id="serial"
-                        defaultValue={equipment.serial_number || ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="manufacturer">Manufacturer</Label>
-                      <Input
-                        id="manufacturer"
-                        defaultValue={equipment.manufacturer}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="model">Model</Label>
-                      <Input id="model" defaultValue={equipment.model || ""} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="mfgNumber">MFG Number</Label>
-                      <Input
-                        id="mfgNumber"
-                        defaultValue={equipment.mfg_number || ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="yearManufactured">
-                        Year Manufactured
-                      </Label>
-                      <Input
-                        id="yearManufactured"
-                        defaultValue={equipment.year_of_manufacture || ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="countryOfOrigin">Country of Origin</Label>
-                      <Input
-                        id="countryOfOrigin"
-                        defaultValue={equipment.country_of_origin || ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="owner">Owner</Label>
-                      <Input id="owner" defaultValue={equipment.owner || ""} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="maintainedBy">Maintained By</Label>
-                      <Input
-                        id="maintainedBy"
-                        defaultValue={equipment.maintained_by || ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="value">Value (GHS)</Label>
-                      <Input
-                        id="value"
-                        defaultValue={equipment.purchase_cost || ""}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditDialogOpen(false)}
+              <div className="flex items-center space-x-2">
+                <DropdownMenu
+                  open={isStatusMenuOpen}
+                  onOpenChange={setIsStatusMenuOpen}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <Badge
+                      className={`${getStatusColor(
+                        equipment.status || "unknown"
+                      )} cursor-pointer hover:opacity-80`}
                     >
-                      Cancel
-                    </Button>
-                    <Button onClick={() => setIsEditDialogOpen(false)}>
-                      Save Changes
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              {/* Maintenance dialog is now handled by MaintenanceLogDialog component */}
+                      {equipment.status
+                        ? equipment.status.charAt(0).toUpperCase() +
+                          equipment.status.slice(1)
+                        : "Unknown"}
+                    </Badge>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {["operational", "maintenance", "broken", "retired"].map(
+                      (status) => {
+                        const isCurrentStatus = equipment.status === status;
+                        const getTextColor = (s: string) => {
+                          switch (s.toLowerCase()) {
+                            case "operational":
+                              return "text-green-600";
+                            case "maintenance":
+                              return "text-yellow-600";
+                            case "broken":
+                              return "text-red-600";
+                            case "retired":
+                              return "text-gray-600";
+                            default:
+                              return "text-gray-600";
+                          }
+                        };
+                        return (
+                          <DropdownMenuItem
+                            key={status}
+                            onClick={() => handleStatusUpdate(status)}
+                            className={`flex items-center justify-between cursor-pointer ${
+                              isCurrentStatus ? "bg-gray-100" : ""
+                            }`}
+                          >
+                            <span className={getTextColor(status)}>
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                              {isCurrentStatus && " ✓"}
+                            </span>
+                          </DropdownMenuItem>
+                        );
+                      }
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
 
@@ -399,7 +321,7 @@ export default function EquipmentDetailPage({
                       Warranty Status
                     </p>
                     <p className="text-lg font-bold text-green-600">
-                      {equipment.warranty_info ? "Active" : "N/A"}
+                      {equipment.warranty_info ? "Active" : <span className="text-gray-400 italic">Not Set</span>}
                     </p>
                     <p className="text-xs text-gray-500">
                       {equipment.warranty_info
@@ -422,7 +344,7 @@ export default function EquipmentDetailPage({
                       {equipment.has_service_contract ? "Yes" : "No"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {equipment.service_organization || "N/A"}
+                      {equipment.service_organization || <span className="text-gray-400 italic">Not Specified</span>}
                     </p>
                   </div>
                   <Users className="h-8 w-8 text-blue-500" />
@@ -444,7 +366,7 @@ export default function EquipmentDetailPage({
                         : "Not scheduled"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {upcomingMaintenance?.type || "N/A"}
+                      {upcomingMaintenance?.type || <span className="text-gray-400 italic">Not Specified</span>}
                     </p>
                   </div>
                   <Calendar className="h-8 w-8 text-orange-500" />
@@ -488,14 +410,16 @@ export default function EquipmentDetailPage({
                         <p className="text-sm font-medium text-gray-600">
                           Tag Number
                         </p>
-                        <p className="font-medium">{equipment.tag_number}</p>
+                        <p className="font-medium">
+                          {equipment.tag_number || <span className="text-gray-400 italic">Not Specified</span>}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">
                           Serial Number
                         </p>
                         <p className="font-medium">
-                          {equipment.serial_number || "N/A"}
+                          {equipment.serial_number || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -503,7 +427,7 @@ export default function EquipmentDetailPage({
                           MFG Number
                         </p>
                         <p className="font-medium">
-                          {equipment.mfg_number || "N/A"}
+                          {equipment.mfg_number || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -517,7 +441,7 @@ export default function EquipmentDetailPage({
                           Model
                         </p>
                         <p className="font-medium">
-                          {equipment.model || "N/A"}
+                          {equipment.model || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -525,7 +449,7 @@ export default function EquipmentDetailPage({
                           Year Manufactured
                         </p>
                         <p className="font-medium">
-                          {equipment.year_of_manufacture || "N/A"}
+                          {equipment.year_of_manufacture || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -533,7 +457,7 @@ export default function EquipmentDetailPage({
                           Country of Origin
                         </p>
                         <p className="font-medium">
-                          {equipment.country_of_origin || "N/A"}
+                          {equipment.country_of_origin || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                     </div>
@@ -562,7 +486,7 @@ export default function EquipmentDetailPage({
                           Sub-unit
                         </p>
                         <p className="font-medium">
-                          {equipment.sub_unit || "N/A"}
+                          {equipment.sub_unit || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -570,7 +494,7 @@ export default function EquipmentDetailPage({
                           Owner
                         </p>
                         <p className="font-medium">
-                          {equipment.owner || "N/A"}
+                          {equipment.owner || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -578,7 +502,7 @@ export default function EquipmentDetailPage({
                           Maintained By
                         </p>
                         <p className="font-medium">
-                          {equipment.maintained_by || "N/A"}
+                          {equipment.maintained_by || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                     </div>
@@ -602,7 +526,7 @@ export default function EquipmentDetailPage({
                           {equipment.purchase_type
                             ? equipment.purchase_type.charAt(0).toUpperCase() +
                               equipment.purchase_type.slice(1)
-                            : "N/A"}
+                            : <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -614,7 +538,7 @@ export default function EquipmentDetailPage({
                             ? new Date(
                                 equipment.purchase_date
                               ).toLocaleDateString()
-                            : "N/A"}
+                            : <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -626,7 +550,7 @@ export default function EquipmentDetailPage({
                             ? new Date(
                                 equipment.date_of_installation
                               ).toLocaleDateString()
-                            : "Not Set"}
+                            : <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -638,7 +562,7 @@ export default function EquipmentDetailPage({
                             ? `GHS ${Number(
                                 equipment.purchase_cost
                               ).toLocaleString()}`
-                            : "Not Set"}
+                            : <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -646,7 +570,7 @@ export default function EquipmentDetailPage({
                           PO Number
                         </p>
                         <p className="font-medium">
-                          {equipment.purchase_order_number || "Not Specified"}
+                          {equipment.purchase_order_number || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -654,7 +578,7 @@ export default function EquipmentDetailPage({
                           Employee Number
                         </p>
                         <p className="font-medium">
-                          {equipment.employee_number || "Not Specified"}
+                          {equipment.employee_number || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                     </div>
@@ -738,7 +662,7 @@ export default function EquipmentDetailPage({
                           Service Organization
                         </p>
                         <p className="font-medium">
-                          {equipment.service_organization || "N/A"}
+                          {equipment.service_organization || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                       <div>
@@ -746,7 +670,7 @@ export default function EquipmentDetailPage({
                           Contact Information
                         </p>
                         <p className="font-medium text-sm">
-                          {equipment.contact_info || "N/A"}
+                          {equipment.contact_info || <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                     </div>
@@ -872,13 +796,13 @@ export default function EquipmentDetailPage({
                                 <TableCell>
                                   {record.date
                                     ? new Date(record.date).toLocaleDateString()
-                                    : "N/A"}
+                                    : <span className="text-gray-400 italic">Not Specified</span>}
                                 </TableCell>
                                 <TableCell>
                                   {record.type
                                     ? record.type.charAt(0).toUpperCase() +
                                       record.type.slice(1)
-                                    : "N/A"}
+                                    : <span className="text-gray-400 italic">Not Specified</span>}
                                 </TableCell>
                                 <TableCell>
                                   {record.technician || "Not Assigned"}
@@ -986,7 +910,7 @@ export default function EquipmentDetailPage({
                             ? new Date(
                                 equipment.created_at
                               ).toLocaleDateString()
-                            : "N/A"}
+                            : <span className="text-gray-400 italic">Not Specified</span>}
                         </p>
                       </div>
                     </div>
@@ -1084,7 +1008,7 @@ export default function EquipmentDetailPage({
                               ? new Date(
                                   equipment.created_at
                                 ).toLocaleDateString()
-                              : "N/A"}{" "}
+                              : <span className="text-gray-400 italic">Not Specified</span>}{" "}
                             •{" "}
                             {equipment.service_organization ||
                               "Service Provider"}
@@ -1276,6 +1200,18 @@ export default function EquipmentDetailPage({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Equipment Dialog - Using AddEquipmentDialog component */}
+      {equipment && (
+        <AddEquipmentDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          departments={departments}
+          queryClient={queryClient}
+          toast={toast}
+          editingEquipment={equipment}
+        />
+      )}
     </div>
   );
 }

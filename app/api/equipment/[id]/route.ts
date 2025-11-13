@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { equipment } from "@/db/schema";
+import { equipment, departments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(
@@ -12,8 +12,43 @@ export async function GET(
     const equipmentId = parseInt(id);
 
     const result = await db
-      .select()
+      .select({
+        id: equipment.id,
+        name: equipment.name,
+        manufacturer: equipment.manufacturer,
+        tagNumber: equipment.tagNumber,
+        status: equipment.status,
+        departmentId: equipment.departmentId,
+        department_name: departments.name,
+        subUnit: equipment.subUnit,
+        sub_unit: equipment.subUnit,
+        model: equipment.model,
+        serialNumber: equipment.serialNumber,
+        purchaseType: equipment.purchaseType,
+        purchaseCost: equipment.purchaseCost,
+        purchase_cost: equipment.purchaseCost,
+        owner: equipment.owner,
+        createdAt: equipment.createdAt,
+        updatedAt: equipment.updatedAt,
+        countryOfOrigin: equipment.countryOfOrigin,
+        yearOfManufacture: equipment.yearOfManufacture,
+        warrantyInfo: equipment.warrantyInfo,
+        warrantyExpiry: equipment.warrantyExpiry,
+        dateOfInstallation: equipment.dateOfInstallation,
+        mfgNumber: equipment.mfgNumber,
+        purchaseDate: equipment.purchaseDate,
+        purchaseOrderNumber: equipment.purchaseOrderNumber,
+        leaseId: equipment.leaseId,
+        photoUrl: equipment.photoUrl,
+        hasServiceContract: equipment.hasServiceContract,
+        serviceOrganization: equipment.serviceOrganization,
+        serviceTypes: equipment.serviceTypes,
+        contactInfo: equipment.contactInfo,
+        employeeNumber: equipment.employeeNumber,
+        maintainedBy: equipment.maintainedBy,
+      })
       .from(equipment)
+      .leftJoin(departments, eq(equipment.departmentId, departments.id))
       .where(eq(equipment.id, equipmentId));
 
     if (result.length === 0) {
