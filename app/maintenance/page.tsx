@@ -481,7 +481,7 @@ export default function MaintenancePage() {
                           {maintenance.type
                             ? maintenance.type.charAt(0).toUpperCase() +
                               maintenance.type.slice(1)
-                            : "N/A"}
+                            : "Not Specified"}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">

@@ -378,7 +378,7 @@ export default function EquipmentDetailPage({
                         ? `GHS ${Number(
                             equipment.purchase_cost
                           ).toLocaleString()}`
-                        : "N/A"}
+                        : "Not Set"}
                     </p>
                     <p className="text-xs text-gray-500">
                       {equipment.purchase_type
@@ -626,7 +626,7 @@ export default function EquipmentDetailPage({
                             ? new Date(
                                 equipment.date_of_installation
                               ).toLocaleDateString()
-                            : "N/A"}
+                            : "Not Set"}
                         </p>
                       </div>
                       <div>
@@ -638,7 +638,7 @@ export default function EquipmentDetailPage({
                             ? `GHS ${Number(
                                 equipment.purchase_cost
                               ).toLocaleString()}`
-                            : "N/A"}
+                            : "Not Set"}
                         </p>
                       </div>
                       <div>
@@ -646,7 +646,7 @@ export default function EquipmentDetailPage({
                           PO Number
                         </p>
                         <p className="font-medium">
-                          {equipment.purchase_order_number || "N/A"}
+                          {equipment.purchase_order_number || "Not Specified"}
                         </p>
                       </div>
                       <div>
@@ -654,7 +654,7 @@ export default function EquipmentDetailPage({
                           Employee Number
                         </p>
                         <p className="font-medium">
-                          {equipment.employee_number || "N/A"}
+                          {equipment.employee_number || "Not Specified"}
                         </p>
                       </div>
                     </div>
@@ -881,14 +881,14 @@ export default function EquipmentDetailPage({
                                     : "N/A"}
                                 </TableCell>
                                 <TableCell>
-                                  {record.technician || "N/A"}
+                                  {record.technician || "Not Assigned"}
                                 </TableCell>
                                 <TableCell>
                                   {record.cost
                                     ? `GHS ${Number(
                                         record.cost
                                       ).toLocaleString()}`
-                                    : "N/A"}
+                                    : "Not Set"}
                                 </TableCell>
                                 <TableCell>
                                   <Badge

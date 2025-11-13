@@ -122,6 +122,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to convert string dates to Date objects
+const parseDate = (dateValue: any): Date | undefined => {
+  if (!dateValue) return undefined;
+  if (dateValue instanceof Date) return dateValue;
+  if (typeof dateValue === "string") {
+    const parsed = new Date(dateValue);
+    return isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+  return undefined;
+};
+
 // POST create new equipment
 export async function POST(request: Request) {
   try {
@@ -138,8 +149,8 @@ export async function POST(request: Request) {
         owner: body.owner,
         maintainedBy: body.maintainedBy,
         warrantyInfo: body.warrantyInfo,
-        warrantyExpiry: body.warrantyExpiry,
-        dateOfInstallation: body.dateOfInstallation,
+        warrantyExpiry: parseDate(body.warrantyExpiry),
+        dateOfInstallation: parseDate(body.dateOfInstallation),
         departmentId: body.departmentId,
         subUnit: body.subUnit,
         model: body.model,
@@ -147,7 +158,7 @@ export async function POST(request: Request) {
         serialNumber: body.serialNumber,
         status: body.status || "operational",
         purchaseType: body.purchaseType,
-        purchaseDate: body.purchaseDate,
+        purchaseDate: parseDate(body.purchaseDate),
         purchaseOrderNumber: body.purchaseOrderNumber,
         purchaseCost: body.purchaseCost,
         leaseId: body.leaseId,
@@ -183,10 +194,19 @@ export async function PUT(request: Request) {
       );
     }
 
+    // Convert date fields
+    const processedData = { ...updateData };
+    const dateFields = ["warrantyExpiry", "dateOfInstallation", "purchaseDate"];
+    dateFields.forEach((field) => {
+      if (processedData[field]) {
+        processedData[field] = parseDate(processedData[field]);
+      }
+    });
+
     const updatedEquipment = await db
       .update(equipment)
       .set({
-        ...updateData,
+        ...processedData,
         updatedAt: new Date(),
       })
       .where(eq(equipment.id, id))

@@ -88,9 +88,43 @@ export const api = {
       return fetchApi(`/equipment?${params.toString()}`);
     },
     create: async (data: FormData) => {
+      // Convert FormData to JSON object
+      const jsonData: Record<string, any> = {};
+
+      // Helper function to convert snake_case to camelCase
+      const snakeToCamel = (str: string) => {
+        return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      };
+
+      data.forEach((value, key) => {
+        // Convert snake_case to camelCase
+        const camelKey = snakeToCamel(key);
+
+        // Handle special cases
+        if (camelKey === "serviceTypes") {
+          try {
+            jsonData[camelKey] = JSON.parse(value as string);
+          } catch {
+            jsonData[camelKey] = value;
+          }
+        } else if (camelKey === "hasServiceContract") {
+          jsonData[camelKey] = value === "true" ? 1 : 0;
+        } else if (value === "true" || value === "false") {
+          jsonData[camelKey] = value === "true";
+        } else if (!isNaN(Number(value)) && value !== "") {
+          // Convert numeric strings to numbers
+          jsonData[camelKey] = Number(value);
+        } else {
+          jsonData[camelKey] = value;
+        }
+      });
+
       const response = await fetch(`${API_URL}/equipment`, {
         method: "POST",
-        body: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(jsonData),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -99,9 +133,43 @@ export const api = {
       return response.json();
     },
     update: async (id: number, data: FormData) => {
+      // Convert FormData to JSON object
+      const jsonData: Record<string, any> = {};
+
+      // Helper function to convert snake_case to camelCase
+      const snakeToCamel = (str: string) => {
+        return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      };
+
+      data.forEach((value, key) => {
+        // Convert snake_case to camelCase
+        const camelKey = snakeToCamel(key);
+
+        // Handle special cases
+        if (camelKey === "serviceTypes") {
+          try {
+            jsonData[camelKey] = JSON.parse(value as string);
+          } catch {
+            jsonData[camelKey] = value;
+          }
+        } else if (camelKey === "hasServiceContract") {
+          jsonData[camelKey] = value === "true" ? 1 : 0;
+        } else if (value === "true" || value === "false") {
+          jsonData[camelKey] = value === "true";
+        } else if (!isNaN(Number(value)) && value !== "") {
+          // Convert numeric strings to numbers
+          jsonData[camelKey] = Number(value);
+        } else {
+          jsonData[camelKey] = value;
+        }
+      });
+
       const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "PUT",
-        body: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(jsonData),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -122,7 +190,12 @@ export const api = {
   },
 
   maintenance: {
-    list: (filters?: { month?: string; department?: string; status?: string; type?: string }) => {
+    list: (filters?: {
+      month?: string;
+      department?: string;
+      status?: string;
+      type?: string;
+    }) => {
       const params = new URLSearchParams();
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -164,11 +237,18 @@ export const api = {
   },
 
   maintenanceRequests: {
-    list: (filters?: { status?: string; priority?: string; equipmentId?: number; page?: number; limit?: number }) => {
+    list: (filters?: {
+      status?: string;
+      priority?: string;
+      equipmentId?: number;
+      page?: number;
+      limit?: number;
+    }) => {
       const params = new URLSearchParams();
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) params.append(key, value.toString());
+          if (value !== undefined && value !== null)
+            params.append(key, value.toString());
         });
       }
       return fetchApi(`/maintenance-requests?${params.toString()}`);
@@ -193,11 +273,7 @@ export const api = {
         method: "DELETE",
       }),
 
-    updateStatus: (
-      id: number,
-      status: string,
-      assignedTo?: string
-    ) =>
+    updateStatus: (id: number, status: string, assignedTo?: string) =>
       fetchApi(`/maintenance-requests/${id}`, {
         method: "PUT",
         body: JSON.stringify({ status, assignedTo }),
@@ -228,7 +304,11 @@ export const api = {
         method: "DELETE",
       }),
 
-    toggleComplete: (maintenanceId: number, itemId: number, isCompleted: boolean) =>
+    toggleComplete: (
+      maintenanceId: number,
+      itemId: number,
+      isCompleted: boolean
+    ) =>
       fetchApi(`/maintenance/${maintenanceId}/checklist/${itemId}`, {
         method: "PUT",
         body: JSON.stringify({ isCompleted }),

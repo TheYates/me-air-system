@@ -1004,7 +1004,9 @@ export default function DepartmentDetailPage({
                             <TableCell className="font-medium">
                               {equipment.name}
                             </TableCell>
-                            <TableCell>{equipment.sub_unit || "N/A"}</TableCell>
+                            <TableCell>
+                              {equipment.sub_unit || "Not Specified"}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 className={getStatusColor(
@@ -1019,14 +1021,14 @@ export default function DepartmentDetailPage({
                                 ? new Date(
                                     equipment.last_service_date
                                   ).toLocaleDateString()
-                                : "N/A"}
+                                : "Not Set"}
                             </TableCell>
                             <TableCell>
                               {equipment.next_maintenance_date
                                 ? new Date(
                                     equipment.next_maintenance_date
                                   ).toLocaleDateString()
-                                : "N/A"}
+                                : "Not Set"}
                             </TableCell>
                             <TableCell>
                               GHS{" "}

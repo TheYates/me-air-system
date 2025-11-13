@@ -38,6 +38,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Trash2,
 } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 import { useRouter } from "next/navigation";
@@ -86,11 +87,16 @@ export default function EquipmentPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [equipmentToDelete, setEquipmentToDelete] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -226,6 +232,71 @@ export default function EquipmentPage() {
     }
   };
 
+  // Open delete confirmation dialog
+  const handleOpenDeleteDialog = (
+    equipmentId: number,
+    equipmentName: string
+  ) => {
+    setEquipmentToDelete({ id: equipmentId, name: equipmentName });
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Confirm and delete equipment
+  const handleConfirmDelete = async () => {
+    if (!equipmentToDelete) return;
+
+    try {
+      // Optimistically remove from cache
+      const currentQueryKey = queryKeys.list({
+        search: debouncedSearchTerm,
+        status: statusFilter,
+        department: departmentFilter,
+        page: currentPage,
+        limit: itemsPerPage,
+      });
+
+      const previousData = queryClient.getQueryData<any>(currentQueryKey);
+
+      if (previousData && previousData.data) {
+        queryClient.setQueryData(currentQueryKey, {
+          ...previousData,
+          data: previousData.data.filter(
+            (item: Equipment) => item.id !== equipmentToDelete.id
+          ),
+        });
+      }
+
+      // Make the API call
+      await api.equipment.delete(equipmentToDelete.id);
+
+      // Invalidate all equipment queries
+      queryClient.invalidateQueries({
+        queryKey: ["equipment"],
+      });
+
+      sonnerToast.success("Equipment deleted", {
+        description: `${equipmentToDelete.name} has been successfully deleted`,
+        duration: 3000,
+      });
+
+      setIsDeleteDialogOpen(false);
+      setEquipmentToDelete(null);
+    } catch (error) {
+      // Revert the optimistic update on error
+      queryClient.invalidateQueries({
+        queryKey: ["equipment"],
+      });
+
+      sonnerToast.error("Failed to delete equipment", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while deleting the equipment",
+        duration: 4000,
+      });
+    }
+  };
+
   // Handle column sorting
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -280,30 +351,41 @@ export default function EquipmentPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-3 md:p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                 Equipment Management
               </h1>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs sm:text-sm"
+              >
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                <span className="hidden sm:inline">Export</span>
               </Button>
-              <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => setIsAddDialogOpen(true)}
+                className="text-xs sm:text-sm"
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Equipment
+                <span className="hidden sm:inline">Add Equipment</span>
+                <span className="sm:hidden">Add</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsBulkAddDialogOpen(true)}
+                className="text-xs sm:text-sm"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Bulk Add (Excel Style)
+                <span className="hidden md:inline">Bulk Add (Excel Style)</span>
+                <span className="md:hidden">Bulk Add</span>
               </Button>
             </div>
           </div>
@@ -311,8 +393,8 @@ export default function EquipmentPage() {
           {/* Filters */}
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-64">
+              <div className="flex flex-col gap-4">
+                <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
@@ -322,47 +404,66 @@ export default function EquipmentPage() {
                         setSearchInput(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="pl-10"
+                      className="pl-10 w-full"
                     />
                   </div>
                 </div>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) =>
-                    handleFilterChange(setStatusFilter, value)
-                  }
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="operational">Operational</SelectItem>
-                    <SelectItem value="maintenance">
-                      Under Maintenance
-                    </SelectItem>
-                    <SelectItem value="broken">Broken</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={departmentFilter}
-                  onValueChange={(value) =>
-                    handleFilterChange(setDepartmentFilter, value)
-                  }
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {departments?.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
-                        {dept.name}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) =>
+                      handleFilterChange(setStatusFilter, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="operational">Operational</SelectItem>
+                      <SelectItem value="maintenance">
+                        Under Maintenance
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      <SelectItem value="broken">Broken</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={departmentFilter}
+                    onValueChange={(value) =>
+                      handleFilterChange(setDepartmentFilter, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Departments</SelectItem>
+                      {departments?.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id.toString()}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setItemsPerPage(parseInt(value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Items per page" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 per page</SelectItem>
+                      <SelectItem value="20">20 per page</SelectItem>
+                      <SelectItem value="50">50 per page</SelectItem>
+                      <SelectItem value="100">100 per page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -370,291 +471,330 @@ export default function EquipmentPage() {
           {/* Equipment Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Equipment Inventory</CardTitle>
+              <CardTitle className="text-lg md:text-xl">
+                Equipment Inventory
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("name")}
-                    >
-                      Name {renderSortIcon("name")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("department_name")}
-                    >
-                      Department {renderSortIcon("department_name")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("status")}
-                    >
-                      Status {renderSortIcon("status")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("last_service_date")}
-                    >
-                      Last Maintenance {renderSortIcon("last_service_date")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("next_maintenance_date")}
-                    >
-                      Next Maintenance {renderSortIcon("next_maintenance_date")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("purchase_cost")}
-                    >
-                      Value {renderSortIcon("purchase_cost")}
-                    </TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedEquipmentData.length > 0 ? (
-                    sortedEquipmentData.map((equipment: Equipment) => (
-                      <TableRow
-                        key={equipment.id}
-                        className="cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() =>
-                          router.push(`/equipment/${equipment.id}`)
-                        }
+            <CardContent className="overflow-x-auto">
+              <div className="min-w-full overflow-x-auto">
+                <Table className="text-xs md:text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("name")}
                       >
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{equipment.name}</div>
-                            <div className="text-sm text-gray-600">
-                              {equipment.manufacturer} {equipment.model || ""}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
+                        Name {renderSortIcon("name")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("department_name")}
+                      >
+                        Department {renderSortIcon("department_name")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("status")}
+                      >
+                        Status {renderSortIcon("status")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("last_service_date")}
+                      >
+                        Last Maintenance {renderSortIcon("last_service_date")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("next_maintenance_date")}
+                      >
+                        Next Maintenance{" "}
+                        {renderSortIcon("next_maintenance_date")}
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("purchase_cost")}
+                      >
+                        Value {renderSortIcon("purchase_cost")}
+                      </TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedEquipmentData.length > 0 ? (
+                      sortedEquipmentData.map((equipment: Equipment) => (
+                        <TableRow
+                          key={equipment.id}
+                          className="cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() =>
+                            router.push(`/equipment/${equipment.id}`)
+                          }
+                        >
+                          <TableCell>
                             <div>
-                              {equipment.department_name || "Unassigned"}
+                              <div className="font-medium">
+                                {equipment.name}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {equipment.manufacturer} {equipment.model || ""}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-600">
-                              {equipment.sub_unit || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div>
+                                {equipment.department_name || "Unassigned"}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {equipment.sub_unit || (
+                                  <span className="text-gray-400 italic">
+                                    Not Specified
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={getStatusColor(
-                              equipment.status || "unknown"
-                            )}
-                          >
-                            {equipment.status
-                              ? equipment.status.charAt(0).toUpperCase() +
-                                equipment.status.slice(1)
-                              : "Unknown"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {equipment.last_service_date
-                            ? new Date(
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={getStatusColor(
+                                equipment.status || "unknown"
+                              )}
+                            >
+                              {equipment.status
+                                ? equipment.status.charAt(0).toUpperCase() +
+                                  equipment.status.slice(1)
+                                : "Unknown"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {equipment.last_service_date ? (
+                              new Date(
                                 equipment.last_service_date
                               ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "short",
                                 day: "numeric",
                               })
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          {equipment.next_maintenance_date ? (
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="h-4 w-4 text-orange-500" />
-                              <span>
-                                {new Date(
-                                  equipment.next_maintenance_date
-                                ).toLocaleDateString("en-US", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
+                            ) : (
+                              <span className="text-gray-400 italic">
+                                Not Set
                               </span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">Not scheduled</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {equipment.purchase_cost
-                            ? `GHS ${Number(
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {equipment.next_maintenance_date ? (
+                              <div className="flex items-center space-x-2">
+                                <Calendar className="h-4 w-4 text-orange-500" />
+                                <span>
+                                  {new Date(
+                                    equipment.next_maintenance_date
+                                  ).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">
+                                Not Scheduled
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {equipment.purchase_cost ? (
+                              `GHS ${Number(
                                 equipment.purchase_cost
                               ).toLocaleString()}`
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/equipment/${equipment.id}`);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
+                            ) : (
+                              <span className="text-gray-400 italic">
+                                Not Set
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/equipment/${equipment.id}`);
+                                }}
                               >
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {/* <DropdownMenuLabel>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  asChild
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Button variant="ghost" size="sm">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {/* <DropdownMenuLabel>
                                   Quick Actions
                                 </DropdownMenuLabel> */}
-                                {/* <DropdownMenuSeparator />
+                                  {/* <DropdownMenuSeparator />
                                 <DropdownMenuLabel className="text-xs font-semibold">
                                   Change Status
                                 </DropdownMenuLabel> */}
-                                {[
-                                  "operational",
-                                  "maintenance",
-                                  "broken",
-                                  "retired",
-                                ].map((status) => {
-                                  const isCurrentStatus =
-                                    equipment.status === status;
-                                  const getTextColor = (s: string) => {
-                                    switch (s.toLowerCase()) {
-                                      case "operational":
-                                        return "text-green-600";
-                                      case "maintenance":
-                                        return "text-yellow-600";
-                                      case "broken":
-                                        return "text-red-600";
-                                      case "retired":
-                                        return "text-gray-600";
-                                      default:
-                                        return "text-gray-600";
-                                    }
-                                  };
-                                  return (
-                                    <DropdownMenuItem
-                                      key={status}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleStatusUpdate(
-                                          equipment.id,
-                                          status
-                                        );
-                                      }}
-                                      className={`flex items-center justify-between cursor-pointer ${
-                                        isCurrentStatus ? "bg-gray-100" : ""
-                                      }`}
-                                    >
-                                      <span className={getTextColor(status)}>
-                                        {status.charAt(0).toUpperCase() +
-                                          status.slice(1)}
-                                        {isCurrentStatus && " ✓"}
-                                      </span>
-                                    </DropdownMenuItem>
-                                  );
-                                })}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/equipment/${equipment.id}`);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                                  {[
+                                    "operational",
+                                    "maintenance",
+                                    "broken",
+                                    "retired",
+                                  ].map((status) => {
+                                    const isCurrentStatus =
+                                      equipment.status === status;
+                                    const getTextColor = (s: string) => {
+                                      switch (s.toLowerCase()) {
+                                        case "operational":
+                                          return "text-green-600";
+                                        case "maintenance":
+                                          return "text-yellow-600";
+                                        case "broken":
+                                          return "text-red-600";
+                                        case "retired":
+                                          return "text-gray-600";
+                                        default:
+                                          return "text-gray-600";
+                                      }
+                                    };
+                                    return (
+                                      <DropdownMenuItem
+                                        key={status}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleStatusUpdate(
+                                            equipment.id,
+                                            status
+                                          );
+                                        }}
+                                        className={`flex items-center justify-between cursor-pointer ${
+                                          isCurrentStatus ? "bg-gray-100" : ""
+                                        }`}
+                                      >
+                                        <span className={getTextColor(status)}>
+                                          {status.charAt(0).toUpperCase() +
+                                            status.slice(1)}
+                                          {isCurrentStatus && " ✓"}
+                                        </span>
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/equipment/${equipment.id}`);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenDeleteDialog(
+                                        equipment.id,
+                                        equipment.name
+                                      );
+                                    }}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-6 text-muted-foreground"
+                        >
+                          No equipment found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-6 text-muted-foreground"
-                      >
-                        No equipment found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t">
-                  <div className="text-sm text-gray-600">
-                    Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                    {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-                    {totalItems} items
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.max(1, prev - 1))
-                      }
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center space-x-1">
-                      {Array.from(
-                        { length: Math.min(5, totalPages) },
-                        (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={
-                                currentPage === pageNum ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
-                              className="w-10"
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        }
-                      )}
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-3 md:px-6 py-4 border-t">
+                    <div className="text-xs md:text-sm text-gray-600 text-center md:text-left">
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                      {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
+                      {totalItems} items
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
+                    <div className="flex items-center space-x-1 md:space-x-2 flex-wrap justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center space-x-1">
+                        {Array.from(
+                          { length: Math.min(5, totalPages) },
+                          (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={
+                                  currentPage === pageNum
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                className="w-10"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          }
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1)
+                          )
+                        }
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -677,6 +817,33 @@ export default function EquipmentPage() {
         queryClient={queryClient}
         toast={toast}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Equipment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{equipmentToDelete?.name}"? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setEquipmentToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
