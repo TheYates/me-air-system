@@ -14,7 +14,8 @@ export async function GET(
     const result = await db
       .select()
       .from(maintenance)
-      .where(eq(maintenance.id, maintenanceId));
+      .where(eq(maintenance.id, maintenanceId))
+      .limit(1);
 
     if (result.length === 0) {
       return NextResponse.json(
@@ -23,7 +24,9 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(result[0]);
+    const response = NextResponse.json(result[0]);
+    response.headers.set("Cache-Control", "public, max-age=300");
+    return response;
   } catch (error) {
     console.error("Error fetching maintenance record:", error);
     return NextResponse.json(
@@ -45,14 +48,13 @@ export async function PUT(
     const result = await db
       .update(maintenance)
       .set({
-        equipmentId: body.equipmentId,
         maintenanceType: body.maintenanceType,
         description: body.description,
         performedBy: body.performedBy,
-        performedDate: body.performedDate ? new Date(body.performedDate) : null,
+        performedDate: body.performedDate ? new Date(body.performedDate) : undefined,
         nextMaintenanceDate: body.nextMaintenanceDate
           ? new Date(body.nextMaintenanceDate)
-          : null,
+          : undefined,
         cost: body.cost,
         status: body.status,
         notes: body.notes,
@@ -68,7 +70,9 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json(result[0]);
+    const response = NextResponse.json(result[0]);
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    return response;
   } catch (error) {
     console.error("Error updating maintenance record:", error);
     return NextResponse.json(
@@ -98,7 +102,9 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true, deleted: result[0] });
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    return response;
   } catch (error) {
     console.error("Error deleting maintenance record:", error);
     return NextResponse.json(
@@ -107,4 +113,3 @@ export async function DELETE(
     );
   }
 }
-

@@ -77,8 +77,8 @@ export default function MaintenancePage() {
   const router = useRouter();
 
   // Fetch maintenance data
-  const { data: maintenanceData = [], isLoading: isLoadingMaintenance } =
-    useQuery<MaintenanceRecord[]>({
+  const { data: maintenanceResponse, isLoading: isLoadingMaintenance } =
+    useQuery({
       queryKey: ["maintenance", statusFilter, typeFilter],
       queryFn: () =>
         api.maintenance.list({
@@ -86,6 +86,8 @@ export default function MaintenancePage() {
           type: typeFilter !== "all" ? typeFilter : undefined,
         }),
     });
+
+  const maintenanceData = maintenanceResponse?.data || [];
 
   // Fetch equipment list for dropdown
   const { data: equipmentResponse } = useQuery({
@@ -420,12 +422,6 @@ export default function MaintenancePage() {
                   <TableRow>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("id")}
-                    >
-                      Task ID {renderSortIcon("id")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort("equipment_name")}
                     >
                       Equipment {renderSortIcon("equipment_name")}
@@ -468,9 +464,6 @@ export default function MaintenancePage() {
                   {sortedMaintenanceData.length > 0 ? (
                     sortedMaintenanceData.map((maintenance) => (
                       <TableRow key={maintenance.id}>
-                        <TableCell className="font-medium">
-                          MT-{maintenance.id.toString().padStart(3, "0")}
-                        </TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium">
@@ -527,7 +520,14 @@ export default function MaintenancePage() {
                         </TableCell>
                         <TableCell>
                           {maintenance.date
-                            ? new Date(maintenance.date).toLocaleDateString()
+                            ? new Date(maintenance.date).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )
                             : "N/A"}
                         </TableCell>
                         <TableCell>

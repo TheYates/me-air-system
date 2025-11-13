@@ -38,10 +38,12 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
 
   // Fetch maintenance data from backend
-  const { data: maintenanceData = [], isLoading } = useQuery({
+  const { data: maintenanceResponse, isLoading } = useQuery({
     queryKey: ["maintenance-schedule"],
     queryFn: () => api.maintenance.list({}),
   });
+
+  const maintenanceData = maintenanceResponse?.data || [];
 
   // Fetch equipment data for display
   const { data: equipmentResponse } = useQuery({

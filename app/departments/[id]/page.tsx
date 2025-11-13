@@ -303,14 +303,16 @@ export default function DepartmentDetailPage({
   const allEquipment = equipmentResponse?.data || [];
 
   // Fetch maintenance for this department
-  const { data: maintenanceData = [] } = useQuery({
+  const { data: maintenanceResponse } = useQuery({
     queryKey: ["department-maintenance", departmentId],
     queryFn: () => api.maintenance.list({}),
     enabled: !!departmentId,
   });
 
+  const maintenanceData = maintenanceResponse?.data || [];
+
   const departmentMaintenance = maintenanceData.filter((m: any) =>
-    allEquipment.some((eq: any) => eq.id === m.equipment_id)
+    allEquipment.some((eq: any) => eq.id === m.equipmentId)
   );
 
   // Get sub-units from department data

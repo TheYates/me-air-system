@@ -1,24 +1,26 @@
 export interface MaintenanceRecord {
   id: number;
-  equipment_id: number;
+  equipmentId: number;
+  type: string;
+  status: string;
+  priority?: string;
+  date: Date | string;
+  scheduledDate?: Date | string;
+  completedDate?: Date | string;
+  technician?: string;
+  notes?: string;
+  cost?: number | string;
+  description?: string;
+  estimatedDuration?: string;
+  actualDuration?: string;
+  progress?: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  
+  // Optional fields for joined data
   equipment_name?: string;
   tag_number?: string;
   department?: string;
-  type: "preventive" | "corrective" | "repair" | "inspection";
-  status: "scheduled" | "in-progress" | "completed" | "cancelled";
-  priority?: "critical" | "high" | "medium" | "low";
-  date: string;
-  scheduled_date?: string;
-  completed_date?: string;
-  technician?: string;
-  notes?: string;
-  cost?: number;
-  description?: string;
-  estimated_duration?: string;
-  actual_duration?: string;
-  progress?: number;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface MaintenanceFilters {

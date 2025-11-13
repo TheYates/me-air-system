@@ -12,19 +12,16 @@ export async function PATCH(
     const equipmentId = parseInt(id);
     const { status } = await request.json();
 
-    if (!status) {
+    if (!status || !["operational", "maintenance", "broken", "retired"].includes(status)) {
       return NextResponse.json(
-        { error: "Status is required" },
+        { error: "Invalid status" },
         { status: 400 }
       );
     }
 
     const result = await db
       .update(equipment)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
+      .set({ status, updatedAt: new Date() })
       .where(eq(equipment.id, equipmentId))
       .returning();
 
@@ -44,4 +41,3 @@ export async function PATCH(
     );
   }
 }
-

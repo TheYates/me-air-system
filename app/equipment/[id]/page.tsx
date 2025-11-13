@@ -31,6 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Navigation } from "@/components/navigation";
 import {
   ArrowLeft,
@@ -50,10 +56,13 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Equipment } from "@/types/equipment";
 import type { MaintenanceRecord } from "@/types/maintenance";
+import { MaintenanceLogDialog } from "@/components/maintenance-log-dialog";
+import { MaintenanceTimeline } from "@/components/maintenance-timeline";
+import { toast as sonnerToast } from "sonner";
 
 export default function EquipmentDetailPage({
   params,
@@ -62,12 +71,14 @@ export default function EquipmentDetailPage({
 }) {
   const { id } = use(params);
   const equipmentId = parseInt(id);
+  const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
   const [isUploadDocDialogOpen, setIsUploadDocDialogOpen] = useState(false);
   const [isUploadPhotoDialogOpen, setIsUploadPhotoDialogOpen] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
 
   // Fetch equipment details
   const { data: equipment, isLoading } = useQuery<Equipment>({
@@ -82,6 +93,51 @@ export default function EquipmentDetailPage({
     enabled: !!equipment,
   });
 
+  // Handle status update
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!equipment) return;
+
+    try {
+      // Optimistically update the cache
+      queryClient.setQueryData(["equipment", equipmentId], {
+        ...equipment,
+        status: newStatus,
+      });
+
+      // Make the API call
+      await api.equipment.updateStatus(equipmentId, newStatus);
+
+      // Invalidate and refetch
+      await queryClient.invalidateQueries({
+        queryKey: ["equipment", equipmentId],
+      });
+
+      sonnerToast.success(
+        `Status updated to ${
+          newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
+        }`,
+        {
+          description: "Equipment status has been successfully changed",
+          duration: 3000,
+        }
+      );
+      setIsStatusMenuOpen(false);
+    } catch (error) {
+      // Revert optimistic update
+      queryClient.invalidateQueries({
+        queryKey: ["equipment", equipmentId],
+      });
+
+      sonnerToast.error("Failed to update status", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while updating the status",
+        duration: 4000,
+      });
+    }
+  };
+
   if (isLoading) {
     return <EquipmentDetailSkeleton />;
   }
@@ -93,7 +149,7 @@ export default function EquipmentDetailPage({
         <div className="flex-1 flex flex-col items-center justify-center">
           <h1 className="text-2xl font-bold">Equipment Not Found</h1>
           <Link href="/equipment">
-            <Button className="mt-4">Back to Equipment</Button>
+            <Button className="mt-4">Back</Button>
           </Link>
         </div>
       </div>
@@ -134,7 +190,7 @@ export default function EquipmentDetailPage({
               <Link href="/equipment">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Equipment
+                  Back
                 </Button>
               </Link>
               <div>
@@ -147,12 +203,58 @@ export default function EquipmentDetailPage({
                   {equipment.model || ""}
                 </p>
               </div>
-              <Badge className={getStatusColor(equipment.status || "unknown")}>
-                {equipment.status
-                  ? equipment.status.charAt(0).toUpperCase() +
-                    equipment.status.slice(1)
-                  : "Unknown"}
-              </Badge>
+              <DropdownMenu
+                open={isStatusMenuOpen}
+                onOpenChange={setIsStatusMenuOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Badge
+                    className={`${getStatusColor(
+                      equipment.status || "unknown"
+                    )} cursor-pointer hover:opacity-80`}
+                  >
+                    {equipment.status
+                      ? equipment.status.charAt(0).toUpperCase() +
+                        equipment.status.slice(1)
+                      : "Unknown"}
+                  </Badge>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {["operational", "maintenance", "broken", "retired"].map(
+                    (status) => {
+                      const isCurrentStatus = equipment.status === status;
+                      const getTextColor = (s: string) => {
+                        switch (s.toLowerCase()) {
+                          case "operational":
+                            return "text-green-600";
+                          case "maintenance":
+                            return "text-yellow-600";
+                          case "broken":
+                            return "text-red-600";
+                          case "retired":
+                            return "text-gray-600";
+                          default:
+                            return "text-gray-600";
+                        }
+                      };
+                      return (
+                        <DropdownMenuItem
+                          key={status}
+                          onClick={() => handleStatusUpdate(status)}
+                          className={`flex items-center justify-between cursor-pointer ${
+                            isCurrentStatus ? "bg-gray-100" : ""
+                          }`}
+                        >
+                          <span className={getTextColor(status)}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {isCurrentStatus && " ✓"}
+                          </span>
+                        </DropdownMenuItem>
+                      );
+                    }
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm">
@@ -258,82 +360,7 @@ export default function EquipmentDetailPage({
                   </div>
                 </DialogContent>
               </Dialog>
-              <Dialog
-                open={isMaintenanceDialogOpen}
-                onOpenChange={setIsMaintenanceDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Wrench className="h-4 w-4 mr-2" />
-                    Schedule Maintenance
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Schedule Maintenance - {equipment.name}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Maintenance Type</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="preventive">Preventive</SelectItem>
-                          <SelectItem value="repair">Repair</SelectItem>
-                          <SelectItem value="calibration">
-                            Calibration
-                          </SelectItem>
-                          <SelectItem value="inspection">Inspection</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="priority">Priority</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="critical">Critical</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="low">Low</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="technician">Technician</Label>
-                      <Input id="technician" placeholder="Technician name" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="duration">Duration</Label>
-                      <Input id="duration" placeholder="e.g., 2 hours" />
-                    </div>
-                    <div className="col-span-2 space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="Maintenance description"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsMaintenanceDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={() => setIsMaintenanceDialogOpen(false)}>
-                      Schedule
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {/* Maintenance dialog is now handled by MaintenanceLogDialog component */}
             </div>
           </div>
 
@@ -741,15 +768,15 @@ export default function EquipmentDetailPage({
                               </span>
                               <Badge className="bg-green-100 text-green-800">
                                 Yes
-                          </Badge>
-                        </div>
+                              </Badge>
+                            </div>
                           ))
                         ) : (
                           <p className="text-sm text-gray-600">
                             No service types specified
                           </p>
                         )}
-                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -763,23 +790,31 @@ export default function EquipmentDetailPage({
                   size="sm"
                   onClick={() => setIsMaintenanceDialogOpen(true)}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Schedule Maintenance
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Log Maintenance
                 </Button>
               </div>
 
+              {/* Maintenance Log Dialog */}
+              <MaintenanceLogDialog
+                open={isMaintenanceDialogOpen}
+                onOpenChange={setIsMaintenanceDialogOpen}
+                equipmentId={equipmentId}
+                equipmentName={equipment?.name}
+              />
+
               {/* Upcoming Maintenance */}
               {upcomingMaintenance && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    <span>Upcoming Maintenance</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center p-4 bg-yellow-50 rounded-lg">
-                    <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                      <span>Upcoming Maintenance</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center p-4 bg-yellow-50 rounded-lg">
+                      <div>
                         <p className="font-medium">
                           {upcomingMaintenance.type
                             ? upcomingMaintenance.type.charAt(0).toUpperCase() +
@@ -787,99 +822,114 @@ export default function EquipmentDetailPage({
                             : "Unknown"}{" "}
                           Maintenance
                         </p>
-                      <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600">
                           Scheduled for{" "}
                           {new Date(
                             upcomingMaintenance.date
                           ).toLocaleDateString()}
                           {upcomingMaintenance.technician &&
                             ` • ${upcomingMaintenance.technician}`}
-                      </p>
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
                     </div>
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               )}
 
-              {/* Maintenance History Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Maintenance History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {maintenanceRecords.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Technician</TableHead>
-                        <TableHead>Cost</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {maintenanceRecords.map((record) => (
-                          <TableRow key={record.id}>
-                          <TableCell>
-                              {record.date
-                                ? new Date(record.date).toLocaleDateString()
-                                : "N/A"}
-                          </TableCell>
-                          <TableCell>
-                              {record.type
-                                ? record.type.charAt(0).toUpperCase() +
-                                  record.type.slice(1)
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell>{record.technician || "N/A"}</TableCell>
-                            <TableCell>
-                              {record.cost
-                                ? `GHS ${Number(record.cost).toLocaleString()}`
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={
-                                  record.status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : record.status === "in-progress"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-blue-100 text-blue-800"
-                                }
-                              >
-                                {record.status
-                                  ? record.status.charAt(0).toUpperCase() +
-                                    record.status.slice(1)
-                                  : "Unknown"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="sm">
-                                View
-                              </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  ) : (
-                    <div className="text-center py-10 text-gray-600">
-                      <Wrench className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p>No maintenance records found</p>
-                      <p className="text-sm mt-2">
-                        Schedule maintenance to start tracking service history
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+              {/* Maintenance Timeline */}
+              <MaintenanceTimeline
+                records={maintenanceRecords}
+                isLoading={false}
+                isError={false}
+              />
 
+              {/* Old Table - Removed */}
+              {false && (
+                <TabsContent value="maintenance" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Maintenance History</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {maintenanceRecords.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Technician</TableHead>
+                              <TableHead>Cost</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {maintenanceRecords.map((record) => (
+                              <TableRow key={record.id}>
+                                <TableCell>
+                                  {record.date
+                                    ? new Date(record.date).toLocaleDateString()
+                                    : "N/A"}
+                                </TableCell>
+                                <TableCell>
+                                  {record.type
+                                    ? record.type.charAt(0).toUpperCase() +
+                                      record.type.slice(1)
+                                    : "N/A"}
+                                </TableCell>
+                                <TableCell>
+                                  {record.technician || "N/A"}
+                                </TableCell>
+                                <TableCell>
+                                  {record.cost
+                                    ? `GHS ${Number(
+                                        record.cost
+                                      ).toLocaleString()}`
+                                    : "N/A"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    className={
+                                      record.status === "completed"
+                                        ? "bg-green-100 text-green-800"
+                                        : record.status === "in-progress"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : "bg-blue-100 text-blue-800"
+                                    }
+                                  >
+                                    {record.status
+                                      ? record.status.charAt(0).toUpperCase() +
+                                        record.status.slice(1)
+                                      : "Unknown"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="sm">
+                                    View
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="text-center py-10 text-gray-600">
+                          <Wrench className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                          <p>No maintenance records found</p>
+                          <p className="text-sm mt-2">
+                            Schedule maintenance to start tracking service
+                            history
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+            </TabsContent>
             <TabsContent value="documents" className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Documents</h3>
@@ -920,7 +970,7 @@ export default function EquipmentDetailPage({
               <Card>
                 <CardContent className="pt-6">
                   {equipment.photo_url ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="border rounded-lg p-4">
                         <div className="w-full h-48 bg-gray-200 rounded mb-3 overflow-hidden">
                           <img
@@ -939,7 +989,7 @@ export default function EquipmentDetailPage({
                             : "N/A"}
                         </p>
                       </div>
-                  </div>
+                    </div>
                   ) : (
                     <div className="text-center py-10 text-gray-600">
                       <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -961,8 +1011,8 @@ export default function EquipmentDetailPage({
                 <CardContent>
                   <div className="space-y-4">
                     {equipment.created_at && (
-                    <div className="flex items-start space-x-3 p-4 border-l-4 border-blue-500 bg-blue-50">
-                      <div className="flex-1">
+                      <div className="flex items-start space-x-3 p-4 border-l-4 border-blue-500 bg-blue-50">
+                        <div className="flex-1">
                           <p className="font-medium">
                             Equipment Added to System
                           </p>
@@ -972,18 +1022,18 @@ export default function EquipmentDetailPage({
                             ).toLocaleDateString()}{" "}
                             • System
                           </p>
-                        <p className="text-sm mt-1">
+                          <p className="text-sm mt-1">
                             Equipment EQ-
                             {equipment.id.toString().padStart(3, "0")} was added
                             to the maintenance system
-                        </p>
+                          </p>
+                        </div>
                       </div>
-                    </div>
                     )}
                     {equipment.date_of_installation && (
-                    <div className="flex items-start space-x-3 p-4 border-l-4 border-green-500 bg-green-50">
-                      <div className="flex-1">
-                        <p className="font-medium">Equipment Installed</p>
+                      <div className="flex items-start space-x-3 p-4 border-l-4 border-green-500 bg-green-50">
+                        <div className="flex-1">
+                          <p className="font-medium">Equipment Installed</p>
                           <p className="text-sm text-gray-600">
                             {new Date(
                               equipment.date_of_installation
@@ -994,14 +1044,14 @@ export default function EquipmentDetailPage({
                             Equipment successfully installed at{" "}
                             {equipment.department_name || "location"}
                           </p>
+                        </div>
                       </div>
-                    </div>
                     )}
                     {equipment.purchase_date && (
-                    <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
-                      <div className="flex-1">
+                      <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
+                        <div className="flex-1">
                           <p className="font-medium">Equipment Purchased</p>
-                        <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600">
                             {new Date(
                               equipment.purchase_date
                             ).toLocaleDateString()}{" "}
@@ -1020,12 +1070,12 @@ export default function EquipmentDetailPage({
                                 equipment.purchase_cost
                               ).toLocaleString()}`}
                           </p>
+                        </div>
                       </div>
-                    </div>
                     )}
                     {equipment.has_service_contract && (
                       <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
-                      <div className="flex-1">
+                        <div className="flex-1">
                           <p className="font-medium">
                             Service Contract Activated
                           </p>
@@ -1043,12 +1093,12 @@ export default function EquipmentDetailPage({
                             Service contract activated with{" "}
                             {equipment.service_organization || "provider"}
                           </p>
+                        </div>
                       </div>
-                    </div>
                     )}
                     {equipment.last_service_date && (
                       <div className="flex items-start space-x-3 p-4 border-l-4 border-orange-500 bg-orange-50">
-                      <div className="flex-1">
+                        <div className="flex-1">
                           <p className="font-medium">Last Service</p>
                           <p className="text-sm text-gray-600">
                             {new Date(
@@ -1059,8 +1109,8 @@ export default function EquipmentDetailPage({
                           <p className="text-sm mt-1">
                             Most recent service performed on this equipment
                           </p>
+                        </div>
                       </div>
-                    </div>
                     )}
                   </div>
                 </CardContent>
@@ -1083,7 +1133,7 @@ export default function EquipmentDetailPage({
             <div className="space-y-2">
               <Label htmlFor="documentName">Document Name</Label>
               <Input id="documentName" placeholder="e.g., User Manual" />
-    </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="documentFile">Select File</Label>
               <Input

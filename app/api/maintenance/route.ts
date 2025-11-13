@@ -1,28 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { maintenance, equipment, departments } from "@/db/schema";
-import { sql, eq, and, ilike } from "drizzle-orm";
+import { sql, eq, and, ilike, desc } from "drizzle-orm";
+import { addCorsHeaders } from "@/lib/cors";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const type = searchParams.get("type");
     const equipmentId = searchParams.get("equipmentId");
     const upcoming = searchParams.get("upcoming");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
 
     let query = db
       .select({
         id: maintenance.id,
         equipmentId: maintenance.equipmentId,
-        maintenanceType: maintenance.maintenanceType,
+        type: maintenance.type,
         description: maintenance.description,
-        performedBy: maintenance.performedBy,
-        performedDate: maintenance.performedDate,
-        nextMaintenanceDate: maintenance.nextMaintenanceDate,
+        technician: maintenance.technician,
+        date: maintenance.date,
+        scheduledDate: maintenance.scheduledDate,
+        completedDate: maintenance.completedDate,
         cost: maintenance.cost,
         status: maintenance.status,
         notes: maintenance.notes,
+        priority: maintenance.priority,
+        progress: maintenance.progress,
+        estimatedDuration: maintenance.estimatedDuration,
+        actualDuration: maintenance.actualDuration,
         createdAt: maintenance.createdAt,
         updatedAt: maintenance.updatedAt,
       })
@@ -36,7 +44,7 @@ export async function GET(request: Request) {
     }
 
     if (type) {
-      conditions.push(ilike(maintenance.maintenanceType, `%${type}%`));
+      conditions.push(ilike(maintenance.type, `%${type}%`));
     }
 
     if (equipmentId) {
@@ -46,27 +54,56 @@ export async function GET(request: Request) {
     if (upcoming === "true") {
       const today = new Date();
       conditions.push(
-        sql`${maintenance.nextMaintenanceDate} >= ${today} AND ${maintenance.nextMaintenanceDate} <= ${new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)}`
+        sql`${maintenance.scheduledDate} >= ${today} AND ${maintenance.scheduledDate} <= ${new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)}`
       );
     }
 
+    // Count total before pagination
+    let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(maintenance);
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(and(...conditions)) as any;
+    }
+    const countResult = await countQuery;
+    const total = countResult[0]?.count || 0;
+
+    // Apply conditions and pagination
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
 
-    const result = await query.orderBy(sql`${maintenance.performedDate} DESC`);
+    const offset = (page - 1) * limit;
+    const result = await query
+      .orderBy(desc(maintenance.date))
+      .limit(limit)
+      .offset(offset);
 
-    return NextResponse.json(result);
+    const response = NextResponse.json({
+      data: result,
+      total: total,
+      page: page,
+      limit: limit,
+      totalPages: Math.ceil(total / limit),
+    });
+    
+    // Cache maintenance records for 5 minutes
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=300, stale-while-revalidate=900"
+    );
+
+    return addCorsHeaders(response, request);
   } catch (error) {
     console.error("Error fetching maintenance records:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: "Failed to fetch maintenance records" },
       { status: 500 }
     );
+    errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    return errorResponse;
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
@@ -74,26 +111,44 @@ export async function POST(request: Request) {
       .insert(maintenance)
       .values({
         equipmentId: body.equipmentId,
-        maintenanceType: body.maintenanceType,
+        type: body.type || body.maintenanceType, // Support both field names
         description: body.description,
-        performedBy: body.performedBy,
-        performedDate: body.performedDate ? new Date(body.performedDate) : null,
-        nextMaintenanceDate: body.nextMaintenanceDate
-          ? new Date(body.nextMaintenanceDate)
-          : null,
+        technician: body.technician || body.performedBy, // Support both field names
+        date: body.date ? new Date(body.date) : (body.performedDate ? new Date(body.performedDate) : new Date()),
+        scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : null,
+        completedDate: body.completedDate ? new Date(body.completedDate) : null,
         cost: body.cost,
         status: body.status || "scheduled",
         notes: body.notes,
+        priority: body.priority,
+        progress: body.progress || 0,
+        estimatedDuration: body.estimatedDuration,
+        actualDuration: body.actualDuration,
       })
       .returning();
 
-    return NextResponse.json(result[0], { status: 201 });
+    // Also update equipment status if provided
+    if (body.equipmentStatus && body.equipmentId) {
+      await db
+        .update(equipment)
+        .set({ status: body.equipmentStatus, updatedAt: new Date() })
+        .where(eq(equipment.id, body.equipmentId));
+    }
+
+    const response = NextResponse.json(result[0], { status: 201 });
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    return addCorsHeaders(response, request);
   } catch (error) {
     console.error("Error creating maintenance record:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: "Failed to create maintenance record" },
       { status: 500 }
     );
+    return addCorsHeaders(errorResponse, request);
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return addCorsHeaders(new NextResponse(null, { status: 204 }), request);
 }
 

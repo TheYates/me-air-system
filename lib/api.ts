@@ -122,7 +122,7 @@ export const api = {
   },
 
   maintenance: {
-    list: (filters?: { month?: string; department?: string }) => {
+    list: (filters?: { month?: string; department?: string; status?: string; type?: string }) => {
       const params = new URLSearchParams();
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -132,18 +132,21 @@ export const api = {
       return fetchApi(`/maintenance?${params.toString()}`);
     },
 
-    getById: (id: string) => fetchApi(`/maintenance/${id}`),
+    getById: (id: number) => fetchApi(`/maintenance/${id}`),
 
     create: (data: any) =>
-      axiosInstance.post("/maintenance", data).then((res) => res.data),
+      fetchApi("/maintenance", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
 
-    update: (id: string, data: any) =>
+    update: (id: number, data: any) =>
       fetchApi(`/maintenance/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
       }),
 
-    delete: (id: string) =>
+    delete: (id: number) =>
       fetchApi(`/maintenance/${id}`, {
         method: "DELETE",
       }),
@@ -161,15 +164,17 @@ export const api = {
   },
 
   maintenanceRequests: {
-    list: (filters?: { status?: string; department?: string }) => {
+    list: (filters?: { status?: string; priority?: string; equipmentId?: number; page?: number; limit?: number }) => {
       const params = new URLSearchParams();
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
-          if (value) params.append(key, value.toString());
+          if (value !== undefined && value !== null) params.append(key, value.toString());
         });
       }
       return fetchApi(`/maintenance-requests?${params.toString()}`);
     },
+
+    getById: (id: number) => fetchApi(`/maintenance-requests/${id}`),
 
     create: (data: any) =>
       fetchApi("/maintenance-requests", {
@@ -177,19 +182,56 @@ export const api = {
         body: JSON.stringify(data),
       }),
 
-    updateStatus: (
-      id: string,
-      status: "approved" | "rejected",
-      approvedBy: string
-    ) =>
-      fetchApi(`/maintenance-requests/${id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, approvedBy }),
+    update: (id: number, data: any) =>
+      fetchApi(`/maintenance-requests/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
       }),
 
-    delete: (id: string) =>
+    delete: (id: number) =>
       fetchApi(`/maintenance-requests/${id}`, {
         method: "DELETE",
+      }),
+
+    updateStatus: (
+      id: number,
+      status: string,
+      assignedTo?: string
+    ) =>
+      fetchApi(`/maintenance-requests/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ status, assignedTo }),
+      }),
+  },
+
+  maintenanceChecklist: {
+    list: (maintenanceId: number) =>
+      fetchApi(`/maintenance/${maintenanceId}/checklist`),
+
+    getById: (maintenanceId: number, itemId: number) =>
+      fetchApi(`/maintenance/${maintenanceId}/checklist/${itemId}`),
+
+    create: (maintenanceId: number, data: any) =>
+      fetchApi(`/maintenance/${maintenanceId}/checklist`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    update: (maintenanceId: number, itemId: number, data: any) =>
+      fetchApi(`/maintenance/${maintenanceId}/checklist/${itemId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+
+    delete: (maintenanceId: number, itemId: number) =>
+      fetchApi(`/maintenance/${maintenanceId}/checklist/${itemId}`, {
+        method: "DELETE",
+      }),
+
+    toggleComplete: (maintenanceId: number, itemId: number, isCompleted: boolean) =>
+      fetchApi(`/maintenance/${maintenanceId}/checklist/${itemId}`, {
+        method: "PUT",
+        body: JSON.stringify({ isCompleted }),
       }),
   },
 

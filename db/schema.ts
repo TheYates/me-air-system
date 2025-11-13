@@ -80,8 +80,11 @@ export const equipment = pgTable(
   },
   (table) => ({
     nameIdx: index("equipment_name_idx").on(table.name),
+    manufacturerIdx: index("equipment_manufacturer_idx").on(table.manufacturer),
     statusIdx: index("equipment_status_idx").on(table.status),
     departmentIdx: index("equipment_department_idx").on(table.departmentId),
+    createdAtIdx: index("equipment_created_at_idx").on(table.createdAt),
+    tagNumberIdx: index("equipment_tag_number_idx").on(table.tagNumber),
   })
 );
 
@@ -118,15 +121,20 @@ export const equipmentSpecifications = pgTable("equipment_specifications", {
 // Maintenance Table
 export const maintenance = pgTable("maintenance", {
   id: serial("id").primaryKey(),
-  equipmentId: integer("equipment_id"),
-  maintenanceType: varchar("maintenance_type", { length: 255 }),
-  description: text("description"),
-  performedBy: varchar("performed_by", { length: 255 }),
-  performedDate: timestamp("performed_date"),
-  nextMaintenanceDate: timestamp("next_maintenance_date"),
-  cost: numeric("cost", { precision: 15, scale: 2 }),
-  status: varchar("status", { length: 50 }),
+  equipmentId: integer("equipment_id").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  status: varchar("status", { length: 50 }).default("scheduled"),
+  priority: varchar("priority", { length: 20 }),
+  date: timestamp("date").notNull(),
+  scheduledDate: timestamp("scheduled_date"),
+  completedDate: timestamp("completed_date"),
+  technician: varchar("technician", { length: 255 }),
   notes: text("notes"),
+  cost: numeric("cost", { precision: 15, scale: 2 }),
+  description: text("description"),
+  estimatedDuration: varchar("estimated_duration", { length: 100 }),
+  actualDuration: varchar("actual_duration", { length: 100 }),
+  progress: integer("progress").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

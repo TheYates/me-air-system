@@ -1,0 +1,14 @@
+# Bun Runtime Configuration
+
+[install]
+# Use fastest mirror for installs
+optional = true
+
+[dev]
+# Hot reload on file changes
+hmr = true
+
+[build]
+# Optimize for next.js
+target = "node"
+

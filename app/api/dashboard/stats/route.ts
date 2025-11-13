@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { equipment, departments, maintenance } from "@/db/schema";
-import { sql, eq } from "drizzle-orm";
+import { equipment, departments, maintenance, activities } from "@/db/schema";
+import { sql, eq, desc, gte } from "drizzle-orm";
+import { addCorsHeaders, handleCorsPreFlight } from "@/lib/cors";
 
-export async function GET() {
+export async function OPTIONS(request: NextRequest) {
+  const preFlight = handleCorsPreFlight(request);
+  if (preFlight) return preFlight;
+}
+
+export async function GET(request: NextRequest) {
   try {
     // Get total equipment count
     const totalEquipmentResult = await db
@@ -23,7 +29,7 @@ export async function GET() {
       .select({ count: sql<number>`count(*)::int` })
       .from(equipment)
       .where(eq(equipment.status, "maintenance"));
-    const inMaintenance = Number(maintenanceResult[0]?.count || 0);
+    const underMaintenance = Number(maintenanceResult[0]?.count || 0);
 
     // Get broken equipment count
     const brokenResult = await db
@@ -31,6 +37,12 @@ export async function GET() {
       .from(equipment)
       .where(eq(equipment.status, "broken"));
     const broken = Number(brokenResult[0]?.count || 0);
+
+    // Get total value of equipment
+    const equipmentValueResult = await db
+      .select({ total: sql<number>`sum(${equipment.purchaseCost})::numeric` })
+      .from(equipment);
+    const equipmentValue = Number(equipmentValueResult[0]?.total || 0);
 
     // Get total departments count
     const totalDepartmentsResult = await db
@@ -45,11 +57,12 @@ export async function GET() {
     const maintenanceRecords = Number(maintenanceRecordsResult[0]?.count || 0);
 
     // Get equipment by status for chart
-    const equipmentByStatus = [
-      { name: "Operational", value: operational, color: "#10b981" },
-      { name: "Maintenance", value: inMaintenance, color: "#f59e0b" },
-      { name: "Broken", value: broken, color: "#ef4444" },
-    ];
+    const statusBreakdown = {
+      operational,
+      maintenance: underMaintenance,
+      broken,
+      retired: totalEquipment - operational - underMaintenance - broken,
+    };
 
     // Get equipment by department
     const equipmentByDepartment = await db
@@ -68,22 +81,84 @@ export async function GET() {
       count: Number(item.count || 0),
     }));
 
-    return NextResponse.json({
+    // Get recent activities (last 10)
+    const recentActivitiesData = await db
+      .select({
+        id: activities.id,
+        type: activities.type,
+        description: activities.description,
+        date: activities.date,
+      })
+      .from(activities)
+      .orderBy(desc(activities.date))
+      .limit(10);
+
+    const recentActivities = recentActivitiesData.map((activity) => ({
+      id: activity.id,
+      type: activity.type,
+      description: activity.description,
+      date: activity.date || new Date(),
+    }));
+
+    // Get upcoming maintenance (scheduled maintenance records)
+    const upcomingMaintenanceData = await db
+      .select({
+        id: maintenance.id,
+        equipmentId: maintenance.equipmentId,
+        equipmentName: equipment.name,
+        maintenanceType: maintenance.type,
+        scheduledDate: maintenance.scheduledDate,
+        maintenanceDate: maintenance.date,
+        status: maintenance.status,
+      })
+      .from(maintenance)
+      .leftJoin(equipment, eq(maintenance.equipmentId, equipment.id))
+      .where(eq(maintenance.status, "scheduled"))
+      .orderBy(sql`COALESCE(${maintenance.scheduledDate}, ${maintenance.date})`)
+      .limit(10);
+
+    const upcomingMaintenance = upcomingMaintenanceData.map((item) => ({
+      id: item.id,
+      equipment_id: item.equipmentId,
+      equipment_name: item.equipmentName || "Unknown Equipment",
+      maintenance_type: item.maintenanceType,
+      due_date: item.scheduledDate || item.maintenanceDate || new Date(),
+      status: item.status,
+    }));
+
+    const response = NextResponse.json({
       totalEquipment,
       operational,
-      maintenance: inMaintenance,
+      underMaintenance,
       broken,
       totalDepartments,
       maintenanceRecords,
-      equipmentByStatus,
+      equipmentValue,
+      statusBreakdown,
       equipmentByDepartment: departmentData,
+      upcomingMaintenance,
+      recentActivities,
+      serviceDue: 0, // Can be calculated from warranty data
     });
+
+    // Cache for 1 minute (dashboard stats update fairly frequently)
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=60, stale-while-revalidate=300"
+    );
+
+    // Add CORS headers
+    return addCorsHeaders(response, request);
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: "Failed to fetch dashboard stats" },
       { status: 500 }
     );
+    errorResponse.headers.set(
+      "Cache-Control",
+      "no-cache, no-store, must-revalidate"
+    );
+    return addCorsHeaders(errorResponse, request);
   }
 }
-

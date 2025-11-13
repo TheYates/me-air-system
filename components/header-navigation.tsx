@@ -1,11 +1,24 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { TrendingUp, Package, Wrench, Building2, Calendar, Settings, User } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  TrendingUp,
+  Package,
+  Wrench,
+  Building2,
+  Calendar,
+  Settings,
+  User,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: TrendingUp },
@@ -14,10 +27,10 @@ const navigationItems = [
   { href: "/departments", label: "Departments", icon: Building2 },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/reports", label: "Reports", icon: TrendingUp },
-]
+];
 
 export function HeaderNavigation() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -37,17 +50,20 @@ export function HeaderNavigation() {
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
             {navigationItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
 
               return (
                 <Link key={item.href} href={item.href}>
-                  <Button variant={isActive ? "default" : "ghost"} className="flex items-center space-x-2">
+                  <Button
+                    variant={isActive ? "default" : "ghost"}
+                    className="flex items-center space-x-2"
+                  >
                     <Icon className="h-4 w-4" />
                     <span>{item.label}</span>
                   </Button>
                 </Link>
-              )
+              );
             })}
           </nav>
 
@@ -87,15 +103,18 @@ export function HeaderNavigation() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 {navigationItems.map((item) => {
-                  const Icon = item.icon
+                  const Icon = item.icon;
                   return (
                     <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href} className="flex items-center space-x-2">
+                      <Link
+                        href={item.href}
+                        className="flex items-center space-x-2"
+                      >
                         <Icon className="h-4 w-4" />
                         <span>{item.label}</span>
                       </Link>
                     </DropdownMenuItem>
-                  )
+                  );
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -103,5 +122,5 @@ export function HeaderNavigation() {
         </div>
       </div>
     </header>
-  )
+  );
 }

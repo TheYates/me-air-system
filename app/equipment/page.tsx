@@ -41,10 +41,24 @@ import {
 } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Equipment } from "@/types/equipment";
 import type { Department } from "@/types/dashboard";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useToast } from "@/hooks/use-toast";
+import { queryKeys } from "@/lib/query-keys";
+import { toast as sonnerToast } from "sonner";
+import { useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -68,48 +82,73 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export default function EquipmentPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(20);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isBulkAddDialogOpen, setIsBulkAddDialogOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Debounce search input to reduce API calls
+  const debouncedSearchTerm = useDebounce(searchInput, 500);
 
   // Fetch equipment data
-  const { data: equipmentResponse, isLoading: isLoadingEquipment } = useQuery({
-    queryKey: [
-      "equipment",
-      searchTerm,
-      statusFilter,
-      departmentFilter,
-      currentPage,
-      itemsPerPage,
-    ],
+  const {
+    data: equipmentResponse,
+    isLoading: isLoadingEquipment,
+    isFetching,
+    error: equipmentError,
+  } = useQuery({
+    queryKey: queryKeys.list({
+      search: debouncedSearchTerm,
+      status: statusFilter,
+      department: departmentFilter,
+      page: currentPage,
+      limit: itemsPerPage,
+    }),
     queryFn: () =>
       api.equipment.list({
-        search: searchTerm || undefined,
+        search: debouncedSearchTerm || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
         department:
           departmentFilter !== "all" ? Number(departmentFilter) : undefined,
         page: currentPage,
         limit: itemsPerPage,
       }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+    placeholderData: (previousData) => previousData, // Keep showing previous data while fetching new results
   });
 
   // Fetch departments
   const { data: departments } = useQuery<Department[]>({
-    queryKey: ["departments"],
+    queryKey: queryKeys.departmentsList,
     queryFn: () => api.departments.list(),
+    staleTime: 1000 * 60 * 30, // 30 minutes - departments don't change often
+    gcTime: 1000 * 60 * 60, // 1 hour
   });
+
+  // Show error toast if equipment fetch fails - use useEffect to avoid infinite loop
+  useEffect(() => {
+    if (equipmentError) {
+      toast({
+        title: "Error",
+        description: "Failed to load equipment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [equipmentError, toast]);
 
   const equipmentData = equipmentResponse?.data || [];
   const totalItems = equipmentResponse?.total || 0;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = equipmentResponse?.totalPages || 1;
 
   // Reset to page 1 when filters change
   const handleFilterChange = (
@@ -118,6 +157,73 @@ export default function EquipmentPage() {
   ) => {
     setter(value);
     setCurrentPage(1);
+  };
+
+  // Quick status update
+  const handleStatusUpdate = async (equipmentId: number, newStatus: string) => {
+    try {
+      // Optimistically update the local cache
+      const currentQueryKey = queryKeys.list({
+        search: debouncedSearchTerm,
+        status: statusFilter,
+        department: departmentFilter,
+        page: currentPage,
+        limit: itemsPerPage,
+      });
+
+      const previousData = queryClient.getQueryData<any>(currentQueryKey);
+
+      // Update the cache optimistically
+      if (previousData && previousData.data) {
+        queryClient.setQueryData(currentQueryKey, {
+          ...previousData,
+          data: previousData.data.map((item: Equipment) =>
+            item.id === equipmentId ? { ...item, status: newStatus } : item
+          ),
+        });
+      }
+
+      // Make the API call
+      const response = await api.equipment.updateStatus(equipmentId, newStatus);
+
+      // Update the cache with the server response to ensure consistency
+      if (previousData && previousData.data) {
+        queryClient.setQueryData(currentQueryKey, {
+          ...previousData,
+          data: previousData.data.map((item: Equipment) =>
+            item.id === equipmentId
+              ? { ...item, status: response.status }
+              : item
+          ),
+        });
+      }
+
+      // Also update the equipment detail query if it exists
+      queryClient.setQueryData(["equipment", equipmentId], response);
+
+      sonnerToast.success(
+        `Status updated to ${
+          newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
+        }`,
+        {
+          description: "Equipment status has been successfully changed",
+          duration: 3000,
+        }
+      );
+    } catch (error) {
+      // Revert the optimistic update on error
+      queryClient.invalidateQueries({
+        queryKey: ["equipment"],
+      });
+
+      sonnerToast.error("Failed to update status", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while updating the status",
+        duration: 4000,
+      });
+    }
   };
 
   // Handle column sorting
@@ -163,7 +269,8 @@ export default function EquipmentPage() {
     );
   };
 
-  if (isLoadingEquipment) {
+  // Only show skeleton on initial load, not during refetches
+  if (isLoadingEquipment && !equipmentResponse) {
     return <EquipmentSkeleton />;
   }
 
@@ -180,7 +287,6 @@ export default function EquipmentPage() {
               <h1 className="text-2xl font-bold text-gray-900">
                 Equipment Management
               </h1>
-              <Badge variant="secondary">{totalItems} total items</Badge>
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm">
@@ -211,9 +317,9 @@ export default function EquipmentPage() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
                       placeholder="Search equipment..."
-                      value={searchTerm}
+                      value={searchInput}
                       onChange={(e) => {
-                        setSearchTerm(e.target.value);
+                        setSearchInput(e.target.value);
                         setCurrentPage(1);
                       }}
                       className="pl-10"
@@ -272,12 +378,6 @@ export default function EquipmentPage() {
                   <TableRow>
                     <TableHead
                       className="cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("id")}
-                    >
-                      Equipment ID {renderSortIcon("id")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort("name")}
                     >
                       Name {renderSortIcon("name")}
@@ -325,9 +425,6 @@ export default function EquipmentPage() {
                           router.push(`/equipment/${equipment.id}`)
                         }
                       >
-                        <TableCell className="font-medium">
-                          EQ-{equipment.id.toString().padStart(3, "0")}
-                        </TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium">{equipment.name}</div>
@@ -362,7 +459,11 @@ export default function EquipmentPage() {
                           {equipment.last_service_date
                             ? new Date(
                                 equipment.last_service_date
-                              ).toLocaleDateString()
+                              ).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
                             : "N/A"}
                         </TableCell>
                         <TableCell>
@@ -372,7 +473,11 @@ export default function EquipmentPage() {
                               <span>
                                 {new Date(
                                   equipment.next_maintenance_date
-                                ).toLocaleDateString()}
+                                ).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
                               </span>
                             </div>
                           ) : (
@@ -398,26 +503,79 @@ export default function EquipmentPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Handle edit action
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Handle maintenance action
-                              }}
-                            >
-                              <Wrench className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {/* <DropdownMenuLabel>
+                                  Quick Actions
+                                </DropdownMenuLabel> */}
+                                {/* <DropdownMenuSeparator />
+                                <DropdownMenuLabel className="text-xs font-semibold">
+                                  Change Status
+                                </DropdownMenuLabel> */}
+                                {[
+                                  "operational",
+                                  "maintenance",
+                                  "broken",
+                                  "retired",
+                                ].map((status) => {
+                                  const isCurrentStatus =
+                                    equipment.status === status;
+                                  const getTextColor = (s: string) => {
+                                    switch (s.toLowerCase()) {
+                                      case "operational":
+                                        return "text-green-600";
+                                      case "maintenance":
+                                        return "text-yellow-600";
+                                      case "broken":
+                                        return "text-red-600";
+                                      case "retired":
+                                        return "text-gray-600";
+                                      default:
+                                        return "text-gray-600";
+                                    }
+                                  };
+                                  return (
+                                    <DropdownMenuItem
+                                      key={status}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStatusUpdate(
+                                          equipment.id,
+                                          status
+                                        );
+                                      }}
+                                      className={`flex items-center justify-between cursor-pointer ${
+                                        isCurrentStatus ? "bg-gray-100" : ""
+                                      }`}
+                                    >
+                                      <span className={getTextColor(status)}>
+                                        {status.charAt(0).toUpperCase() +
+                                          status.slice(1)}
+                                        {isCurrentStatus && " ✓"}
+                                      </span>
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/equipment/${equipment.id}`);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -465,7 +623,7 @@ export default function EquipmentPage() {
                             pageNum = i + 1;
                           } else if (currentPage >= totalPages - 2) {
                             pageNum = totalPages - 4 + i;
-    } else {
+                          } else {
                             pageNum = currentPage - 2 + i;
                           }
                           return (
@@ -507,6 +665,8 @@ export default function EquipmentPage() {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         departments={departments || []}
+        queryClient={queryClient}
+        toast={toast}
       />
 
       {/* Bulk Add Dialog */}
@@ -514,6 +674,8 @@ export default function EquipmentPage() {
         open={isBulkAddDialogOpen}
         onOpenChange={setIsBulkAddDialogOpen}
         departments={departments || []}
+        queryClient={queryClient}
+        toast={toast}
       />
     </div>
   );
@@ -523,10 +685,14 @@ function AddEquipmentDialog({
   open,
   onOpenChange,
   departments,
+  queryClient,
+  toast,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: Department[];
+  queryClient: ReturnType<typeof useQueryClient>;
+  toast: ReturnType<typeof useToast>["toast"];
 }) {
   const [activeTab, setActiveTab] = useState("details");
   const [formData, setFormData] = useState<any>({});
@@ -567,16 +733,29 @@ function AddEquipmentDialog({
       });
 
       await api.equipment.create(submitData);
+
+      // Invalidate equipment query to refetch
+      queryClient.invalidateQueries({ queryKey: ["equipment"] });
+
+      toast({
+        title: "Success",
+        description: "Equipment added successfully!",
+      });
+
       onOpenChange(false);
-    // Reset form
+      // Reset form
       setFormData({});
       setPhotoPreview(null);
       setSelectedDepartment(null);
       setActiveTab("details");
-      // Refetch equipment list
-      window.location.reload();
     } catch (error) {
       console.error("Error creating equipment:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to add equipment",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -586,287 +765,287 @@ function AddEquipmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
           <DialogTitle className="text-2xl">Add Equipment</DialogTitle>
-            <DialogDescription>
+          <DialogDescription>
             Enter the equipment details below. Required fields are marked with
             an asterisk (*).
-            </DialogDescription>
-          </DialogHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-4">
-              <TabsTrigger value="details">Equipment Details</TabsTrigger>
-              <TabsTrigger value="location">Location & Model</TabsTrigger>
-              <TabsTrigger value="costs">Costs</TabsTrigger>
-              <TabsTrigger value="service">Service</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-4 mb-4">
+            <TabsTrigger value="details">Equipment Details</TabsTrigger>
+            <TabsTrigger value="location">Location & Model</TabsTrigger>
+            <TabsTrigger value="costs">Costs</TabsTrigger>
+            <TabsTrigger value="service">Service</TabsTrigger>
+          </TabsList>
 
-            {/* Equipment Details Tab */}
-            <TabsContent value="details">
-              <Card>
-                <CardContent className="pt-6 space-y-6">
+          {/* Equipment Details Tab */}
+          <TabsContent value="details">
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter equipment name"
+                    value={formData.name || ""}
+                    onChange={(e) => handleFormChange("name", e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="tag_number">Tag Number *</Label>
                     <Input
-                      id="name"
-                      placeholder="Enter equipment name"
-                      value={formData.name || ""}
-                      onChange={(e) => handleFormChange("name", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="tag_number">Tag Number *</Label>
-                      <Input
-                        id="tag_number"
-                        placeholder="Enter tag number"
-                        value={formData.tag_number || ""}
+                      id="tag_number"
+                      placeholder="Enter tag number"
+                      value={formData.tag_number || ""}
                       onChange={(e) =>
                         handleFormChange("tag_number", e.target.value)
                       }
-                      />
-                    </div>
-                    <div className="space-y-2">
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="year_of_manufacture">
                       Year Manufactured
                     </Label>
-                      <Input
-                        id="year_of_manufacture"
-                        type="number"
-                        placeholder="YYYY"
-                        value={formData.year_of_manufacture || ""}
+                    <Input
+                      id="year_of_manufacture"
+                      type="number"
+                      placeholder="YYYY"
+                      value={formData.year_of_manufacture || ""}
                       onChange={(e) =>
                         handleFormChange("year_of_manufacture", e.target.value)
                       }
-                      />
-                    </div>
-                    <div className="space-y-2">
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="date_of_installation">
                       Date of Installation
                     </Label>
-                      <Input
-                        id="date_of_installation"
-                        type="date"
-                        value={formData.date_of_installation || ""}
+                    <Input
+                      id="date_of_installation"
+                      type="date"
+                      value={formData.date_of_installation || ""}
                       onChange={(e) =>
                         handleFormChange("date_of_installation", e.target.value)
                       }
-                        max={new Date().toISOString().split("T")[0]}
-                      />
-                    </div>
+                      max={new Date().toISOString().split("T")[0]}
+                    />
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="manufacturer">Manufacturer *</Label>
-                      <Input
-                        id="manufacturer"
-                        placeholder="Enter manufacturer"
-                        value={formData.manufacturer || ""}
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="manufacturer">Manufacturer *</Label>
+                    <Input
+                      id="manufacturer"
+                      placeholder="Enter manufacturer"
+                      value={formData.manufacturer || ""}
                       onChange={(e) =>
                         handleFormChange("manufacturer", e.target.value)
                       }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country_of_origin">Country</Label>
-                      <Input
-                        id="country_of_origin"
-                        placeholder="Country of origin"
-                        value={formData.country_of_origin || ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country_of_origin">Country</Label>
+                    <Input
+                      id="country_of_origin"
+                      placeholder="Country of origin"
+                      value={formData.country_of_origin || ""}
                       onChange={(e) =>
                         handleFormChange("country_of_origin", e.target.value)
                       }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="owner">Owner</Label>
-                      <Input
-                        id="owner"
-                        placeholder="Equipment owner"
-                        value={formData.owner || ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="owner">Owner</Label>
+                    <Input
+                      id="owner"
+                      placeholder="Equipment owner"
+                      value={formData.owner || ""}
                       onChange={(e) =>
                         handleFormChange("owner", e.target.value)
                       }
-                      />
-                    </div>
+                    />
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="maintained_by">Maintained By</Label>
-                    <Input
-                      id="maintained_by"
-                      placeholder="Maintainer"
-                      value={formData.maintained_by || ""}
+                <div className="space-y-2">
+                  <Label htmlFor="maintained_by">Maintained By</Label>
+                  <Input
+                    id="maintained_by"
+                    placeholder="Maintainer"
+                    value={formData.maintained_by || ""}
                     onChange={(e) =>
                       handleFormChange("maintained_by", e.target.value)
                     }
-                    />
-                  </div>
+                  />
+                </div>
 
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Equipment Photo</h3>
-                    <div className="flex items-center gap-4">
-                      <div className="border rounded-md flex items-center justify-center w-32 h-32 bg-muted">
-                        {photoPreview ? (
-                          <img
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Equipment Photo</h3>
+                  <div className="flex items-center gap-4">
+                    <div className="border rounded-md flex items-center justify-center w-32 h-32 bg-muted">
+                      {photoPreview ? (
+                        <img
                           src={photoPreview}
-                            alt="Equipment preview"
-                            className="w-full h-full object-cover rounded-md"
-                          />
-                        ) : (
-                          <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1">
+                          alt="Equipment preview"
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      ) : (
+                        <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1">
                       <Input
                         type="file"
                         accept="image/*"
                         onChange={handlePhotoChange}
                         className="cursor-pointer"
                       />
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Upload a clear photo of the equipment. Max size: 5MB.
-                        </p>
-                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Upload a clear photo of the equipment. Max size: 5MB.
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="warranty_info">Warranty Information</Label>
-                    <Textarea
-                      id="warranty_info"
-                      placeholder="Enter warranty details"
-                      className="h-20"
-                      value={formData.warranty_info || ""}
+                <div className="space-y-2">
+                  <Label htmlFor="warranty_info">Warranty Information</Label>
+                  <Textarea
+                    id="warranty_info"
+                    placeholder="Enter warranty details"
+                    className="h-20"
+                    value={formData.warranty_info || ""}
                     onChange={(e) =>
                       handleFormChange("warranty_info", e.target.value)
                     }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Location Tab */}
-            <TabsContent value="location">
-              <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label>Department *</Label>
-                      <Select
-                        value={formData.department_id?.toString() || ""}
-                        onValueChange={(value) => {
+          {/* Location Tab */}
+          <TabsContent value="location">
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Department *</Label>
+                    <Select
+                      value={formData.department_id?.toString() || ""}
+                      onValueChange={(value) => {
                         handleFormChange("department_id", Number(value));
                         const dept = departments.find(
                           (d) => d.id === Number(value)
                         );
                         setSelectedDepartment(dept || null);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id.toString()}>
-                              {dept.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id.toString()}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Sub Unit</Label>
                     <Input
                       placeholder="Enter sub unit"
-                        value={formData.sub_unit || ""}
+                      value={formData.sub_unit || ""}
                       onChange={(e) =>
                         handleFormChange("sub_unit", e.target.value)
                       }
                     />
-                    </div>
                   </div>
+                </div>
 
-                  <Separator className="my-6" />
+                <Separator className="my-6" />
 
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Model Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="model">Model</Label>
-                        <Input
-                          id="model"
-                          placeholder="Enter model name/number"
-                          value={formData.model || ""}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Model Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="model">Model</Label>
+                      <Input
+                        id="model"
+                        placeholder="Enter model name/number"
+                        value={formData.model || ""}
                         onChange={(e) =>
                           handleFormChange("model", e.target.value)
                         }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="mfg_number">MFG Number</Label>
-                        <Input
-                          id="mfg_number"
-                          placeholder="Enter manufacturing number"
-                          value={formData.mfg_number || ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="mfg_number">MFG Number</Label>
+                      <Input
+                        id="mfg_number"
+                        placeholder="Enter manufacturing number"
+                        value={formData.mfg_number || ""}
                         onChange={(e) =>
                           handleFormChange("mfg_number", e.target.value)
                         }
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="serial_number">Serial Number *</Label>
-                      <Input
-                        id="serial_number"
-                        placeholder="Enter serial number"
-                        value={formData.serial_number || ""}
-                      onChange={(e) =>
-                        handleFormChange("serial_number", e.target.value)
-                      }
                       />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="serial_number">Serial Number *</Label>
+                    <Input
+                      id="serial_number"
+                      placeholder="Enter serial number"
+                      value={formData.serial_number || ""}
+                      onChange={(e) =>
+                        handleFormChange("serial_number", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Costs Tab */}
-            <TabsContent value="costs">
-              <Card>
+          {/* Costs Tab */}
+          <TabsContent value="costs">
+            <Card>
               <CardContent className="pt-6 space-y-6">
-                    <div className="space-y-3">
-                      <Label>Purchase Type *</Label>
-                      <RadioGroup
-                        value={formData.purchase_type || ""}
+                <div className="space-y-3">
+                  <Label>Purchase Type *</Label>
+                  <RadioGroup
+                    value={formData.purchase_type || ""}
                     onValueChange={(value) =>
                       handleFormChange("purchase_type", value)
                     }
-                        className="flex flex-col space-y-1"
-                      >
-                        <div className="flex items-center space-x-3 space-y-0">
-                          <RadioGroupItem value="purchase" />
-                          <Label className="font-normal">Purchase</Label>
-                        </div>
-                        <div className="flex items-center space-x-3 space-y-0">
-                          <RadioGroupItem value="lease" />
-                          <Label className="font-normal">Lease</Label>
-                        </div>
-                        <div className="flex items-center space-x-3 space-y-0">
-                          <RadioGroupItem value="rental" />
-                          <Label className="font-normal">Rental</Label>
-                        </div>
-                      </RadioGroup>
+                    className="flex flex-col space-y-1"
+                  >
+                    <div className="flex items-center space-x-3 space-y-0">
+                      <RadioGroupItem value="purchase" />
+                      <Label className="font-normal">Purchase</Label>
                     </div>
+                    <div className="flex items-center space-x-3 space-y-0">
+                      <RadioGroupItem value="lease" />
+                      <Label className="font-normal">Lease</Label>
+                    </div>
+                    <div className="flex items-center space-x-3 space-y-0">
+                      <RadioGroupItem value="rental" />
+                      <Label className="font-normal">Rental</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Purchase Date</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Purchase Date</Label>
                     <Input
                       type="date"
                       value={formData.purchase_date || ""}
@@ -875,38 +1054,38 @@ function AddEquipmentDialog({
                       }
                       max={new Date().toISOString().split("T")[0]}
                     />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="purchase_cost">Purchase Cost</Label>
-                        <div className="relative">
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="purchase_cost">Purchase Cost</Label>
+                    <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         GHS
                       </span>
-                          <Input
-                            id="purchase_cost"
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="0.00"
-                            className="pl-12"
-                            value={formData.purchase_cost || ""}
-                            onChange={(e) => {
+                      <Input
+                        id="purchase_cost"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        className="pl-12"
+                        value={formData.purchase_cost || ""}
+                        onChange={(e) => {
                           const value = e.target.value.replace(/[^\d.]/g, "");
                           handleFormChange("purchase_cost", value);
-                            }}
-                          />
-                        </div>
-                      </div>
+                        }}
+                      />
                     </div>
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label htmlFor="purchase_order_number">
                       Purchase Order Number
                     </Label>
-                        <Input
-                          id="purchase_order_number"
-                          placeholder="Enter PO number"
-                          value={formData.purchase_order_number || ""}
+                    <Input
+                      id="purchase_order_number"
+                      placeholder="Enter PO number"
+                      value={formData.purchase_order_number || ""}
                       onChange={(e) =>
                         handleFormChange(
                           "purchase_order_number",
@@ -914,47 +1093,47 @@ function AddEquipmentDialog({
                         )
                       }
                     />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lease_id">Lease ID</Label>
-                        <Input
-                          id="lease_id"
-                          placeholder="Enter lease ID"
-                          value={formData.lease_id || ""}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lease_id">Lease ID</Label>
+                    <Input
+                      id="lease_id"
+                      placeholder="Enter lease ID"
+                      value={formData.lease_id || ""}
                       onChange={(e) =>
                         handleFormChange("lease_id", e.target.value)
                       }
-                          disabled={formData.purchase_type !== "lease"}
-                        />
-                    </div>
+                      disabled={formData.purchase_type !== "lease"}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Service Tab */}
-            <TabsContent value="service">
-              <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <div className="space-y-3">
-                    <Label>Service Contract</Label>
-                    <RadioGroup
-                      value={formData.has_service_contract ? "true" : "false"}
+          {/* Service Tab */}
+          <TabsContent value="service">
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-3">
+                  <Label>Service Contract</Label>
+                  <RadioGroup
+                    value={formData.has_service_contract ? "true" : "false"}
                     onValueChange={(value) =>
                       handleFormChange("has_service_contract", value === "true")
                     }
-                      className="flex flex-row space-x-4"
-                    >
-                      <div className="flex items-center space-x-3 space-y-0">
-                        <RadioGroupItem value="true" />
-                        <Label className="font-normal">Yes</Label>
-                      </div>
-                      <div className="flex items-center space-x-3 space-y-0">
-                        <RadioGroupItem value="false" />
-                        <Label className="font-normal">No</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
+                    className="flex flex-row space-x-4"
+                  >
+                    <div className="flex items-center space-x-3 space-y-0">
+                      <RadioGroupItem value="true" />
+                      <Label className="font-normal">Yes</Label>
+                    </div>
+                    <div className="flex items-center space-x-3 space-y-0">
+                      <RadioGroupItem value="false" />
+                      <Label className="font-normal">No</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
 
                 <div
                   className={
@@ -963,146 +1142,146 @@ function AddEquipmentDialog({
                       : ""
                   }
                 >
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label htmlFor="service_organization">
                       Service Organization
                     </Label>
-                      <Input
-                        id="service_organization"
-                        placeholder="Enter service provider name"
-                        value={formData.service_organization || ""}
+                    <Input
+                      id="service_organization"
+                      placeholder="Enter service provider name"
+                      value={formData.service_organization || ""}
                       onChange={(e) =>
                         handleFormChange("service_organization", e.target.value)
                       }
-                        disabled={!formData.has_service_contract}
-                      />
-                    </div>
+                      disabled={!formData.has_service_contract}
+                    />
+                  </div>
 
-                    <Separator className="my-6" />
+                  <Separator className="my-6" />
 
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium">Service Types</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                          { id: "breakdown", label: "Breakdown Repair" },
-                          { id: "maintenance", label: "Periodic Maintenance" },
-                          { id: "training", label: "Training" },
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium">Service Types</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { id: "breakdown", label: "Breakdown Repair" },
+                        { id: "maintenance", label: "Periodic Maintenance" },
+                        { id: "training", label: "Training" },
                         {
                           id: "supplies",
                           label: "Supply of Consumables and Accessories",
                         },
-                        ].map((item) => (
+                      ].map((item) => (
                         <div
                           key={item.id}
                           className="flex flex-row items-start space-x-3 space-y-0"
                         >
-                            <Checkbox
+                          <Checkbox
                             checked={
                               formData.service_types?.includes(item.id) || false
                             }
-                              onCheckedChange={(checked) => {
+                            onCheckedChange={(checked) => {
                               const currentValues =
                                 formData.service_types || [];
-                                const newValues = checked
-                                  ? [...currentValues, item.id]
+                              const newValues = checked
+                                ? [...currentValues, item.id]
                                 : currentValues.filter(
                                     (value: string) => value !== item.id
                                   );
                               handleFormChange("service_types", newValues);
-                              }}
-                              disabled={!formData.has_service_contract}
-                            />
-                            <Label className="font-normal">{item.label}</Label>
-                          </div>
-                        ))}
-                      </div>
+                            }}
+                            disabled={!formData.has_service_contract}
+                          />
+                          <Label className="font-normal">{item.label}</Label>
+                        </div>
+                      ))}
                     </div>
+                  </div>
 
-                    <Separator className="my-6" />
+                  <Separator className="my-6" />
 
-                    <div className="space-y-4">
+                  <div className="space-y-4">
                     <h3 className="text-sm font-medium">
                       Additional Information
                     </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="contact_info">Contact</Label>
-                          <Input
-                            id="contact_info"
-                            placeholder="Enter contact information"
-                            value={formData.contact_info || ""}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_info">Contact</Label>
+                        <Input
+                          id="contact_info"
+                          placeholder="Enter contact information"
+                          value={formData.contact_info || ""}
                           onChange={(e) =>
                             handleFormChange("contact_info", e.target.value)
                           }
-                            disabled={!formData.has_service_contract}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="employee_number">Employee Number</Label>
-                          <Input
-                            id="employee_number"
-                            placeholder="Enter employee number"
-                            value={formData.employee_number || ""}
+                          disabled={!formData.has_service_contract}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="employee_number">Employee Number</Label>
+                        <Input
+                          id="employee_number"
+                          placeholder="Enter employee number"
+                          value={formData.employee_number || ""}
                           onChange={(e) =>
                             handleFormChange("employee_number", e.target.value)
                           }
-                            disabled={!formData.has_service_contract}
-                          />
-                        </div>
+                          disabled={!formData.has_service_contract}
+                        />
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-          <div className="flex justify-between mt-4">
-            <Button
-              type="button"
-              variant="outline"
+        <div className="flex justify-between mt-4">
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => {
               const currentIndex = tabValues.indexOf(activeTab);
               if (currentIndex > 0) {
                 setActiveTab(tabValues[currentIndex - 1]);
               }
             }}
-              disabled={tabValues.indexOf(activeTab) === 0}
-            >
-              Previous
-            </Button>
+            disabled={tabValues.indexOf(activeTab) === 0}
+          >
+            Previous
+          </Button>
 
-            {tabValues.indexOf(activeTab) === tabValues.length - 1 ? (
+          {tabValues.indexOf(activeTab) === tabValues.length - 1 ? (
             <Button
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
             >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Equipment"
-                )}
-              </Button>
-            ) : (
-              <Button
-                type="button"
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Equipment"
+              )}
+            </Button>
+          ) : (
+            <Button
+              type="button"
               onClick={() => {
                 const currentIndex = tabValues.indexOf(activeTab);
                 if (currentIndex < tabValues.length - 1) {
                   setActiveTab(tabValues[currentIndex + 1]);
                 }
               }}
-              >
-                Next
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            >
+              Next
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1110,10 +1289,14 @@ function BulkAddEquipmentDialog({
   open,
   onOpenChange,
   departments,
+  queryClient,
+  toast,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: Department[];
+  queryClient: ReturnType<typeof useQueryClient>;
+  toast: ReturnType<typeof useToast>["toast"];
 }) {
   const [excelRows, setExcelRows] = useState([
     {
@@ -1191,20 +1374,34 @@ function BulkAddEquipmentDialog({
     setIsSubmitting(true);
     try {
       // Submit each row
+      let successCount = 0;
       for (const row of excelRows) {
-        const formData = new FormData();
-        Object.entries(row).forEach(([key, value]) => {
-          if (key !== "id" && value !== "" && value !== undefined) {
-            if (key === "has_service_contract") {
-              formData.append(key, value === "true" ? "true" : "false");
-            } else {
-              formData.append(key, value.toString());
+        try {
+          const formData = new FormData();
+          Object.entries(row).forEach(([key, value]) => {
+            if (key !== "id" && value !== "" && value !== undefined) {
+              if (key === "has_service_contract") {
+                formData.append(key, value === "true" ? "true" : "false");
+              } else {
+                formData.append(key, value.toString());
+              }
             }
-          }
-        });
+          });
 
-        await api.equipment.create(formData);
+          await api.equipment.create(formData);
+          successCount++;
+        } catch (rowError) {
+          console.error("Error creating equipment row:", rowError);
+        }
       }
+
+      // Invalidate equipment query to refetch
+      queryClient.invalidateQueries({ queryKey: ["equipment"] });
+
+      toast({
+        title: "Success",
+        description: `${successCount} equipment items added successfully!`,
+      });
 
       onOpenChange(false);
       // Reset form
@@ -1236,10 +1433,14 @@ function BulkAddEquipmentDialog({
           employee_number: "",
         },
       ]);
-      // Refetch equipment list
-      window.location.reload();
     } catch (error) {
-      console.error("Error creating equipment:", error);
+      console.error("Error in bulk equipment creation:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to add equipment",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1346,36 +1547,36 @@ function BulkAddEquipmentDialog({
               </thead>
               <tbody>
                 {excelRows.map((row, index) => (
-                    <tr key={row.id} className="hover:bg-gray-50">
+                  <tr key={row.id} className="hover:bg-gray-50">
                     <td className="border border-gray-300 p-1 text-center text-sm font-medium">
                       {index + 1}
                     </td>
 
-                      {/* Basic Information */}
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.name}
+                    {/* Basic Information */}
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.name}
                         onChange={(e) =>
                           updateExcelRow(row.id, "name", e.target.value)
                         }
-                          placeholder="Equipment name"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.tag_number}
+                        placeholder="Equipment name"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.tag_number}
                         onChange={(e) =>
                           updateExcelRow(row.id, "tag_number", e.target.value)
                         }
-                          placeholder="Tag number"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          type="number"
-                          value={row.year_of_manufacture}
+                        placeholder="Tag number"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        type="number"
+                        value={row.year_of_manufacture}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1383,16 +1584,16 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="YYYY"
-                          min="1900"
-                          max={new Date().getFullYear()}
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          type="date"
-                          value={row.date_of_installation}
+                        placeholder="YYYY"
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        type="date"
+                        value={row.date_of_installation}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1400,23 +1601,23 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                          max={new Date().toISOString().split("T")[0]}
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.manufacturer}
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                        max={new Date().toISOString().split("T")[0]}
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.manufacturer}
                         onChange={(e) =>
                           updateExcelRow(row.id, "manufacturer", e.target.value)
                         }
-                          placeholder="Manufacturer"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.country_of_origin}
+                        placeholder="Manufacturer"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.country_of_origin}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1424,23 +1625,23 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="Country"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.owner}
+                        placeholder="Country"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.owner}
                         onChange={(e) =>
                           updateExcelRow(row.id, "owner", e.target.value)
                         }
-                          placeholder="Owner"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.maintained_by}
+                        placeholder="Owner"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.maintained_by}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1448,13 +1649,13 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="Maintainer"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.warranty_info}
+                        placeholder="Maintainer"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.warranty_info}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1462,67 +1663,67 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="Warranty details"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
+                        placeholder="Warranty details"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
 
-                      {/* Location & Model */}
-                      <td className="border border-gray-300 p-1">
-                        <Select
-                          value={row.department_id}
-                          onValueChange={(value) => {
+                    {/* Location & Model */}
+                    <td className="border border-gray-300 p-1">
+                      <Select
+                        value={row.department_id}
+                        onValueChange={(value) => {
                           updateExcelRow(row.id, "department_id", value);
-                          }}
-                        >
-                          <SelectTrigger className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500">
-                            <SelectValue placeholder="Select dept" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {departments.map((dept) => (
+                        }}
+                      >
+                        <SelectTrigger className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500">
+                          <SelectValue placeholder="Select dept" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((dept) => (
                             <SelectItem
                               key={dept.id}
                               value={dept.id.toString()}
                             >
-                                {dept.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="border border-gray-300 p-1">
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="border border-gray-300 p-1">
                       <Input
-                          value={row.sub_unit}
+                        value={row.sub_unit}
                         onChange={(e) =>
                           updateExcelRow(row.id, "sub_unit", e.target.value)
                         }
                         placeholder="Sub unit"
                         className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
                       />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.model}
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.model}
                         onChange={(e) =>
                           updateExcelRow(row.id, "model", e.target.value)
                         }
-                          placeholder="Model"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.mfg_number}
+                        placeholder="Model"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.mfg_number}
                         onChange={(e) =>
                           updateExcelRow(row.id, "mfg_number", e.target.value)
                         }
-                          placeholder="MFG #"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.serial_number}
+                        placeholder="MFG #"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.serial_number}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1530,33 +1731,33 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="Serial number"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
+                        placeholder="Serial number"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
 
-                      {/* Costs */}
-                      <td className="border border-gray-300 p-1">
-                        <Select
-                          value={row.purchase_type}
+                    {/* Costs */}
+                    <td className="border border-gray-300 p-1">
+                      <Select
+                        value={row.purchase_type}
                         onValueChange={(value) =>
                           updateExcelRow(row.id, "purchase_type", value)
                         }
-                        >
-                          <SelectTrigger className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500">
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="purchase">Purchase</SelectItem>
-                            <SelectItem value="lease">Lease</SelectItem>
-                            <SelectItem value="rental">Rental</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          type="date"
-                          value={row.purchase_date}
+                      >
+                        <SelectTrigger className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500">
+                          <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="purchase">Purchase</SelectItem>
+                          <SelectItem value="lease">Lease</SelectItem>
+                          <SelectItem value="rental">Rental</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        type="date"
+                        value={row.purchase_date}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1564,26 +1765,26 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                          max={new Date().toISOString().split("T")[0]}
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={row.purchase_cost}
-                          onChange={(e) => {
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                        max={new Date().toISOString().split("T")[0]}
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={row.purchase_cost}
+                        onChange={(e) => {
                           const value = e.target.value.replace(/[^\d.]/g, "");
                           updateExcelRow(row.id, "purchase_cost", value);
-                          }}
-                          placeholder="0.00"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.purchase_order_number}
+                        }}
+                        placeholder="0.00"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.purchase_order_number}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1591,42 +1792,42 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="PO number"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.lease_id}
+                        placeholder="PO number"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.lease_id}
                         onChange={(e) =>
                           updateExcelRow(row.id, "lease_id", e.target.value)
                         }
-                          placeholder="Lease ID"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                          disabled={row.purchase_type !== "lease"}
-                        />
-                      </td>
+                        placeholder="Lease ID"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                        disabled={row.purchase_type !== "lease"}
+                      />
+                    </td>
 
-                      {/* Service */}
-                      <td className="border border-gray-300 p-1">
-                        <Select
-                          value={row.has_service_contract}
+                    {/* Service */}
+                    <td className="border border-gray-300 p-1">
+                      <Select
+                        value={row.has_service_contract}
                         onValueChange={(value) =>
                           updateExcelRow(row.id, "has_service_contract", value)
                         }
-                        >
-                          <SelectTrigger className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500">
-                            <SelectValue placeholder="Contract" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="true">Yes</SelectItem>
-                            <SelectItem value="false">No</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.service_organization}
+                      >
+                        <SelectTrigger className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500">
+                          <SelectValue placeholder="Contract" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Yes</SelectItem>
+                          <SelectItem value="false">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.service_organization}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1634,25 +1835,25 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="Service org"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                          disabled={row.has_service_contract !== "true"}
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.contact_info}
+                        placeholder="Service org"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                        disabled={row.has_service_contract !== "true"}
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.contact_info}
                         onChange={(e) =>
                           updateExcelRow(row.id, "contact_info", e.target.value)
                         }
-                          placeholder="Contact"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                          disabled={row.has_service_contract !== "true"}
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <Input
-                          value={row.employee_number}
+                        placeholder="Contact"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                        disabled={row.has_service_contract !== "true"}
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <Input
+                        value={row.employee_number}
                         onChange={(e) =>
                           updateExcelRow(
                             row.id,
@@ -1660,27 +1861,27 @@ function BulkAddEquipmentDialog({
                             e.target.value
                           )
                         }
-                          placeholder="Emp #"
-                          className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
-                          disabled={row.has_service_contract !== "true"}
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-1">
-                        <div className="flex items-center justify-center space-x-1">
-                          {excelRows.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeExcelRow(row.id)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            >
+                        placeholder="Emp #"
+                        className="border-0 h-8 text-sm focus:ring-1 focus:ring-blue-500"
+                        disabled={row.has_service_contract !== "true"}
+                      />
+                    </td>
+                    <td className="border border-gray-300 p-1">
+                      <div className="flex items-center justify-center space-x-1">
+                        {excelRows.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeExcelRow(row.id)}
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
                             <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -1763,7 +1964,7 @@ function EquipmentSkeleton() {
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-10 w-32" />
-            </div>
+          </div>
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex gap-4">

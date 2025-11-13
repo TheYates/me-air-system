@@ -1,25 +1,36 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { FileText, Filter, BarChart3, PieChart, AlertTriangle, Package, Wrench } from "lucide-react"
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-} from "recharts"
-import { HeaderNavigation } from "@/components/header-navigation"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  FileText,
+  Filter,
+  BarChart3,
+  PieChart,
+  AlertTriangle,
+  Package,
+  Wrench,
+} from "lucide-react";
+import { Navigation } from "@/components/navigation";
+import { BarChartComponent } from "@/components/charts/bar-chart";
+import { PieChartComponent } from "@/components/charts/pie-chart";
 
 const reportTypes = [
   {
@@ -64,7 +75,7 @@ const reportTypes = [
     icon: PieChart,
     category: "Analytics",
   },
-]
+];
 
 const sampleInventoryData = [
   {
@@ -107,7 +118,7 @@ const sampleInventoryData = [
     value: "$450,000",
     warranty: "2025-09-05",
   },
-]
+];
 
 const maintenanceStatsData = [
   { month: "Jan", preventive: 15, repair: 8, calibration: 5, inspection: 12 },
@@ -116,7 +127,7 @@ const maintenanceStatsData = [
   { month: "Apr", preventive: 20, repair: 9, calibration: 8, inspection: 13 },
   { month: "May", preventive: 25, repair: 7, calibration: 6, inspection: 18 },
   { month: "Jun", preventive: 28, repair: 5, calibration: 9, inspection: 16 },
-]
+];
 
 const departmentDistribution = [
   { name: "Manufacturing", value: 89, color: "#3b82f6" },
@@ -124,27 +135,27 @@ const departmentDistribution = [
   { name: "Facilities", value: 54, color: "#f59e0b" },
   { name: "IT Department", value: 43, color: "#8b5cf6" },
   { name: "Medical", value: 38, color: "#ef4444" },
-]
+];
 
 export default function ReportsPage() {
-  const [selectedReport, setSelectedReport] = useState<string>("")
-  const [dateRange, setDateRange] = useState("last-30-days")
-  const [department, setDepartment] = useState("all")
+  const [selectedReport, setSelectedReport] = useState<string>("");
+  const [dateRange, setDateRange] = useState("last-30-days");
+  const [department, setDepartment] = useState("all");
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Operational":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       case "Under Maintenance":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800";
       case "Broken":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800";
       case "Retired":
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   const renderReportContent = () => {
     switch (selectedReport) {
@@ -173,7 +184,9 @@ export default function ReportsPage() {
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.department}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
+                        <Badge className={getStatusColor(item.status)}>
+                          {item.status}
+                        </Badge>
                       </TableCell>
                       <TableCell>{item.value}</TableCell>
                       <TableCell>{item.warranty}</TableCell>
@@ -183,7 +196,7 @@ export default function ReportsPage() {
               </Table>
             </CardContent>
           </Card>
-        )
+        );
 
       case "maintenance-history":
         return (
@@ -192,21 +205,39 @@ export default function ReportsPage() {
               <CardTitle>Maintenance History Report</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={maintenanceStatsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="preventive" stackId="a" fill="#3b82f6" name="Preventive" />
-                  <Bar dataKey="repair" stackId="a" fill="#ef4444" name="Repair" />
-                  <Bar dataKey="calibration" stackId="a" fill="#10b981" name="Calibration" />
-                  <Bar dataKey="inspection" stackId="a" fill="#f59e0b" name="Inspection" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-[400px]">
+                <BarChartComponent
+                  labels={maintenanceStatsData.map((item) => item.month)}
+                  datasets={[
+                    {
+                      label: "Preventive",
+                      data: maintenanceStatsData.map((item) => item.preventive),
+                      backgroundColor: "#3b82f6",
+                    },
+                    {
+                      label: "Repair",
+                      data: maintenanceStatsData.map((item) => item.repair),
+                      backgroundColor: "#ef4444",
+                    },
+                    {
+                      label: "Calibration",
+                      data: maintenanceStatsData.map(
+                        (item) => item.calibration
+                      ),
+                      backgroundColor: "#10b981",
+                    },
+                    {
+                      label: "Inspection",
+                      data: maintenanceStatsData.map((item) => item.inspection),
+                      backgroundColor: "#f59e0b",
+                    },
+                  ]}
+                  stacked={true}
+                />
+              </div>
             </CardContent>
           </Card>
-        )
+        );
 
       case "department-summary":
         return (
@@ -215,38 +246,45 @@ export default function ReportsPage() {
               <CardTitle>Department Summary Report</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <RechartsPieChart>
-                  <Pie
-                    data={departmentDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={80}
-                    outerRadius={160}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {departmentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPieChart>
-              </ResponsiveContainer>
+              <div className="h-[400px] mb-6">
+                <PieChartComponent
+                  labels={departmentDistribution.map((item) => item.name)}
+                  data={departmentDistribution.map((item) => item.value)}
+                  colors={departmentDistribution.map((item) => item.color)}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4 mt-6">
-                {departmentDistribution.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="font-medium">{item.name}</span>
+                {departmentDistribution.map((item, index) => {
+                  const total = departmentDistribution.reduce(
+                    (sum, i) => sum + i.value,
+                    0
+                  );
+                  const percentage = ((item.value / total) * 100).toFixed(1);
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold">{item.value}</div>
+                        <div className="text-xs text-gray-600">
+                          {percentage}%
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-lg font-bold">{item.value}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
-        )
+        );
 
       default:
         return (
@@ -254,113 +292,131 @@ export default function ReportsPage() {
             <CardContent className="pt-6">
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Report</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Select a Report
+                </h3>
                 <p className="text-gray-600">
-                  Choose a report type from the list above to generate and view the report.
+                  Choose a report type from the list above to generate and view
+                  the report.
                 </p>
               </div>
             </CardContent>
           </Card>
-        )
+        );
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <HeaderNavigation />
-
-      <div className="p-6">
-        {/* Report Selection */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Available Reports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {reportTypes.map((report) => {
-                const IconComponent = report.icon
-                return (
-                  <div
-                    key={report.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                      selectedReport === report.id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => setSelectedReport(report.id)}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <IconComponent
-                        className={`h-6 w-6 mt-1 ${selectedReport === report.id ? "text-blue-600" : "text-gray-500"}`}
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{report.name}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{report.description}</p>
-                        <Badge variant="secondary" className="mt-2">
-                          {report.category}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Filters */}
-        {selectedReport && (
+    <div className="flex h-screen bg-gray-50">
+      <Navigation />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-auto p-6">
+          {/* Report Selection */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Filter className="h-5 w-5" />
-                <span>Report Filters</span>
-              </CardTitle>
+              <CardTitle>Available Reports</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
-                  <Select value={dateRange} onValueChange={setDateRange}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="last-7-days">Last 7 days</SelectItem>
-                      <SelectItem value="last-30-days">Last 30 days</SelectItem>
-                      <SelectItem value="last-90-days">Last 90 days</SelectItem>
-                      <SelectItem value="last-year">Last year</SelectItem>
-                      <SelectItem value="custom">Custom range</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Department</label>
-                  <Select value={department} onValueChange={setDepartment}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Departments</SelectItem>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="laboratory">Laboratory</SelectItem>
-                      <SelectItem value="facilities">Facilities</SelectItem>
-                      <SelectItem value="it">IT Department</SelectItem>
-                      <SelectItem value="medical">Medical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button>Generate Report</Button>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {reportTypes.map((report) => {
+                  const IconComponent = report.icon;
+                  return (
+                    <div
+                      key={report.id}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                        selectedReport === report.id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                      onClick={() => setSelectedReport(report.id)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <IconComponent
+                          className={`h-6 w-6 mt-1 ${
+                            selectedReport === report.id
+                              ? "text-blue-600"
+                              : "text-gray-500"
+                          }`}
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900">
+                            {report.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {report.description}
+                          </p>
+                          <Badge variant="secondary" className="mt-2">
+                            {report.category}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Report Content */}
-        {renderReportContent()}
+          {/* Filters */}
+          {selectedReport && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Filter className="h-5 w-5" />
+                  <span>Report Filters</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date Range</label>
+                    <Select value={dateRange} onValueChange={setDateRange}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="last-7-days">Last 7 days</SelectItem>
+                        <SelectItem value="last-30-days">
+                          Last 30 days
+                        </SelectItem>
+                        <SelectItem value="last-90-days">
+                          Last 90 days
+                        </SelectItem>
+                        <SelectItem value="last-year">Last year</SelectItem>
+                        <SelectItem value="custom">Custom range</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Department</label>
+                    <Select value={department} onValueChange={setDepartment}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        <SelectItem value="manufacturing">
+                          Manufacturing
+                        </SelectItem>
+                        <SelectItem value="laboratory">Laboratory</SelectItem>
+                        <SelectItem value="facilities">Facilities</SelectItem>
+                        <SelectItem value="it">IT Department</SelectItem>
+                        <SelectItem value="medical">Medical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button>Generate Report</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Report Content */}
+          {renderReportContent()}
+        </div>
       </div>
     </div>
-  )
+  );
 }
