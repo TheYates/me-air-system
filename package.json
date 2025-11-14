@@ -12,6 +12,7 @@
     "db:studio": "bunx drizzle-kit studio",
     "db:migrate": "bunx drizzle-kit migrate",
     "db:check": "bun scripts/check-tables.ts",
+    "db:assign-departments": "bunx tsx scripts/assign-departments.ts",
     "test:api": "bun scripts/test-api.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

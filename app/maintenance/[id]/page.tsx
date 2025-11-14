@@ -44,7 +44,7 @@ export default function MaintenanceDetailPage({
   const [newPart, setNewPart] = useState({ part: "", quantity: "", cost: "" });
 
   // Fetch maintenance details
-  const { data: maintenance, isLoading } = useQuery<MaintenanceRecord>({
+  const { data: maintenance, isLoading } = useQuery<MaintenanceRecord | undefined>({
     queryKey: ["maintenance", maintenanceId],
     queryFn: () => api.maintenance.getById(maintenanceId.toString()),
   });
@@ -316,7 +316,7 @@ export default function MaintenanceDetailPage({
                     <Textarea
                       placeholder="Enter maintenance notes..."
                       value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewNote(e.target.value)}
                       rows={3}
                     />
                     <Button>Add Note</Button>
@@ -370,7 +370,7 @@ export default function MaintenanceDetailPage({
                         id="part"
                         placeholder="Enter part name"
                         value={newPart.part}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setNewPart({ ...newPart, part: e.target.value })
                         }
                       />
@@ -382,7 +382,7 @@ export default function MaintenanceDetailPage({
                         type="number"
                         placeholder="Qty"
                         value={newPart.quantity}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setNewPart({ ...newPart, quantity: e.target.value })
                         }
                       />
@@ -394,7 +394,7 @@ export default function MaintenanceDetailPage({
                         type="number"
                         placeholder="GHS 0.00"
                         value={newPart.cost}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setNewPart({ ...newPart, cost: e.target.value })
                         }
                       />

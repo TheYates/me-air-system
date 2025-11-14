@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,13 +21,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Navigation } from "@/components/navigation";
 import { use } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { toast as sonnerToast } from "sonner";
 import type { Department } from "@/types/department";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -45,6 +53,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Printer,
+  Download,
+  Eye,
+  MoreHorizontal,
+  MoreVertical,
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -275,6 +292,7 @@ export default function DepartmentDetailPage({
 }) {
   const { id } = use(params);
   const departmentId = parseInt(id);
+  const queryClient = useQueryClient();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddSubUnitDialogOpen, setIsAddSubUnitDialogOpen] = useState(false);
@@ -283,7 +301,25 @@ export default function DepartmentDetailPage({
   const [selectedSubUnit, setSelectedSubUnit] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [equipmentSearchTerm, setEquipmentSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const itemsPerPage = 10;
+
+  // Handle URL parameters for tab navigation
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tab = searchParams.get("tab");
+      if (tab && tab !== activeTab) {
+        setActiveTab(tab);
+        // Clear the URL parameter after a short delay to ensure tab is set
+        setTimeout(() => {
+          window.history.replaceState({}, "", window.location.pathname);
+        }, 100);
+      }
+    }
+  }, []); // Empty dependency array to run only once
 
   // Fetch department data from backend
   const { data: department, isLoading: isDepartmentLoading } =
@@ -321,7 +357,7 @@ export default function DepartmentDetailPage({
   // Create sub-unit objects with equipment counts
   const subUnits = subUnitsFromDept.map((name: string) => {
     const equipmentCount = allEquipment.filter(
-      (eq: any) => eq.sub_unit === name
+      (eq: any) => eq.subUnit === name
     ).length;
     return {
       id: name,
@@ -333,15 +369,70 @@ export default function DepartmentDetailPage({
 
   const [isSubUnitsModified, setIsSubUnitsModified] = useState(false);
 
-  // Filter equipment by search
-  const filteredEquipment = allEquipment.filter(
+  // Handle sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  // Sort icon helper function
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-4 w-4 text-blue-600" />
+    ) : (
+      <ArrowDown className="h-4 w-4 text-blue-600" />
+    );
+  };
+
+  // Filter and sort equipment
+  let filteredEquipment = allEquipment.filter(
     (eq: any) =>
       eq.name.toLowerCase().includes(equipmentSearchTerm.toLowerCase()) ||
       eq.id.toString().includes(equipmentSearchTerm) ||
-      (eq.sub_unit || "")
+      (eq.subUnit || "")
         .toLowerCase()
         .includes(equipmentSearchTerm.toLowerCase())
   );
+
+  // Apply sorting
+  if (sortField) {
+    filteredEquipment = [...filteredEquipment].sort((a: any, b: any) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle different data types
+      if (sortField === "name") {
+        aValue = (aValue || "").toString().toLowerCase();
+        bValue = (bValue || "").toString().toLowerCase();
+      } else if (sortField === "subUnit") {
+        aValue = (aValue || "").toString().toLowerCase();
+        bValue = (bValue || "").toString().toLowerCase();
+      } else if (sortField === "status") {
+        aValue = (aValue || "").toString().toLowerCase();
+        bValue = (bValue || "").toString().toLowerCase();
+      } else if (sortField === "last_service_date" || sortField === "created_at") {
+        aValue = aValue ? new Date(aValue).getTime() : 0;
+        bValue = bValue ? new Date(bValue).getTime() : 0;
+      } else if (sortField === "purchase_cost") {
+        aValue = Number(aValue || 0);
+        bValue = Number(bValue || 0);
+      }
+
+      if (sortDirection === "asc") {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  }
 
   // Pagination for equipment
   const totalPages = Math.ceil(filteredEquipment.length / itemsPerPage);
@@ -369,18 +460,21 @@ export default function DepartmentDetailPage({
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Operational":
+    switch (status?.toLowerCase()) {
+      case "operational":
         return "bg-green-100 text-green-800";
-      case "Under Maintenance":
+      case "under maintenance":
+      case "maintenance":
         return "bg-yellow-100 text-yellow-800";
-      case "Broken":
+      case "broken":
         return "bg-red-100 text-red-800";
-      case "Scheduled":
+      case "retired":
+        return "bg-gray-100 text-gray-800";
+      case "scheduled":
         return "bg-blue-100 text-blue-800";
-      case "In Progress":
+      case "in progress":
         return "bg-yellow-100 text-yellow-800";
-      case "Completed":
+      case "completed":
         return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -397,6 +491,196 @@ export default function DepartmentDetailPage({
         return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Print function for equipment table
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const tableHTML = `
+      <html>
+        <head>
+          <title>Equipment List - ${department?.name}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .header-info { margin-bottom: 20px; }
+            .header-info p { margin: 5px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>Equipment List</h1>
+          <div class="header-info">
+            <p><strong>Department:</strong> ${department?.name}</p>
+            <p><strong>Manager:</strong> ${department?.manager || "N/A"}</p>
+            <p><strong>Total Equipment:</strong> ${
+              filteredEquipment.length
+            } items</p>
+            <p><strong>Generated on:</strong> ${new Date().toLocaleDateString()}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Sub-unit</th>
+                <th>Status</th>
+                <th>Last Maintenance</th>
+                <th>Next Maintenance</th>
+                <th>Value (GHS)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredEquipment
+                .map(
+                  (equipment: any, index: number) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${equipment.name}</td>
+                  <td>${equipment.subUnit || "Not Specified"}</td>
+                  <td>${equipment.status || "Unknown"}</td>
+                  <td>${
+                    equipment.last_service_date
+                      ? new Date(
+                          equipment.last_service_date
+                        ).toLocaleDateString()
+                      : "Not Set"
+                  }</td>
+                  <td>${
+                    equipment.next_maintenance_date
+                      ? new Date(
+                          equipment.next_maintenance_date
+                        ).toLocaleDateString()
+                      : "Not Set"
+                  }</td>
+                  <td>${(equipment.purchase_cost || 0).toLocaleString()}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(tableHTML);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  // Export to CSV function
+  const handleExport = () => {
+    const headers = [
+      "#",
+      "Name",
+      "Sub-unit",
+      "Status",
+      "Last Maintenance",
+      "Next Maintenance",
+      "Value (GHS)",
+    ];
+    const csvContent = [
+      headers.join(","),
+      ...filteredEquipment.map((equipment: any, index: number) =>
+        [
+          index + 1,
+          `"${equipment.name}"`,
+          `"${equipment.subUnit || "Not Specified"}"`,
+          `"${equipment.status || "Unknown"}"`,
+          `"${
+            equipment.last_service_date
+              ? new Date(equipment.last_service_date).toLocaleDateString()
+              : "Not Set"
+          }"`,
+          `"${
+            equipment.next_maintenance_date
+              ? new Date(equipment.next_maintenance_date).toLocaleDateString()
+              : "Not Set"
+          }"`,
+          equipment.purchase_cost || 0,
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `equipment-list-${department?.name?.replace(/\s+/g, "-")}-${
+        new Date().toISOString().split("T")[0]
+      }.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Quick status update function
+  const handleStatusUpdate = async (equipmentId: number, newStatus: string) => {
+    try {
+      // Optimistically update the local cache
+      const currentQueryKey = ["department-equipment", departmentId];
+      const previousData = queryClient.getQueryData<any>(currentQueryKey);
+
+      // Update the cache optimistically
+      if (previousData && previousData.data) {
+        queryClient.setQueryData(currentQueryKey, {
+          ...previousData,
+          data: previousData.data.map((item: any) =>
+            item.id === equipmentId ? { ...item, status: newStatus } : item
+          ),
+        });
+      }
+
+      // Make the API call
+      const response = await api.equipment.updateStatus(equipmentId, newStatus);
+
+      // Update the cache with the server response to ensure consistency
+      if (previousData && previousData.data) {
+        queryClient.setQueryData(currentQueryKey, {
+          ...previousData,
+          data: previousData.data.map((item: any) =>
+            item.id === equipmentId
+              ? { ...item, status: response.status }
+              : item
+          ),
+        });
+      }
+
+      // Also update the equipment detail query if it exists
+      queryClient.setQueryData(["equipment", equipmentId], response);
+
+      sonnerToast.success(
+        `Status updated to ${
+          newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
+        }`,
+        {
+          description: "Equipment status has been successfully changed",
+          duration: 3000,
+        }
+      );
+    } catch (error) {
+      // Revert the optimistic update on error
+      queryClient.invalidateQueries({
+        queryKey: ["equipment"],
+      });
+
+      sonnerToast.error("Failed to update status", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while updating the status",
+        duration: 4000,
+      });
     }
   };
 
@@ -585,7 +869,11 @@ export default function DepartmentDetailPage({
           </div>
 
           {/* Main Content Tabs */}
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="subunits">Sub-units</TabsTrigger>
@@ -959,10 +1247,20 @@ export default function DepartmentDetailPage({
             <TabsContent value="equipment" className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Department Equipment</h3>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Equipment
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Equipment
+                  </Button>
+                </div>
               </div>
 
               {/* Search Bar */}
@@ -985,78 +1283,281 @@ export default function DepartmentDetailPage({
 
               <Card>
                 <CardContent className="pt-6">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Sub-unit</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Last Maintenance</TableHead>
-                        <TableHead>Next Maintenance</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentEquipment.length > 0 ? (
-                        currentEquipment.map((equipment: any) => (
-                          <TableRow key={equipment.id}>
-                            <TableCell className="font-medium">
-                              {equipment.name}
-                            </TableCell>
-                            <TableCell>
-                              {equipment.sub_unit || "Not Specified"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={getStatusColor(
-                                  equipment.status || "unknown"
-                                )}
+                  <div className="min-w-full overflow-x-auto">
+                    <Table className="text-xs md:text-sm">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-16">#</TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            onClick={() => handleSort("name")}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span>Name</span>
+                              {getSortIcon("name")}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            onClick={() => handleSort("subUnit")}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span>Sub-unit</span>
+                              {getSortIcon("subUnit")}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            onClick={() => handleSort("status")}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span>Status</span>
+                              {getSortIcon("status")}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            onClick={() => handleSort("last_service_date")}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span>Last Maintenance</span>
+                              {getSortIcon("last_service_date")}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            onClick={() => handleSort("created_at")}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span>Date Added</span>
+                              {getSortIcon("created_at")}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            onClick={() => handleSort("purchase_cost")}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span>Value</span>
+                              {getSortIcon("purchase_cost")}
+                            </div>
+                          </TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentEquipment.length > 0 ? (
+                          currentEquipment.map(
+                            (equipment: any, index: number) => (
+                              <TableRow
+                                key={equipment.id}
+                                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                                onClick={() =>
+                                  (window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`)
+                                }
                               >
-                                {equipment.status || "Unknown"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {equipment.last_service_date
-                                ? new Date(
-                                    equipment.last_service_date
-                                  ).toLocaleDateString()
-                                : "Not Set"}
-                            </TableCell>
-                            <TableCell>
-                              {equipment.next_maintenance_date
-                                ? new Date(
-                                    equipment.next_maintenance_date
-                                  ).toLocaleDateString()
-                                : "Not Set"}
-                            </TableCell>
-                            <TableCell>
-                              GHS{" "}
-                              {(equipment.purchase_cost || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell>
-                              <Link href={`/equipment/${equipment.id}`}>
-                                <Button variant="ghost" size="sm">
-                                  View
-                                </Button>
-                              </Link>
+                                <TableCell className="text-gray-500">
+                                  {startIndex + index + 1}
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium">
+                                      {equipment.name}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {equipment.manufacturer}{" "}
+                                      {equipment.model || ""}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium">
+                                      {equipment.subUnit || (
+                                        <span className="text-gray-400 italic">
+                                          Not Specified
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      Tag:{" "}
+                                      {equipment.tagNumber ||
+                                        equipment.tag_number ||
+                                        "Not Specified"}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    className={getStatusColor(
+                                      equipment.status || "unknown"
+                                    )}
+                                  >
+                                    {equipment.status
+                                      ? equipment.status
+                                          .charAt(0)
+                                          .toUpperCase() +
+                                        equipment.status.slice(1)
+                                      : "Unknown"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {equipment.last_service_date ? (
+                                    new Date(
+                                      equipment.last_service_date
+                                    ).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })
+                                  ) : (
+                                    <span className="text-gray-400 italic">
+                                      Not Set
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {equipment.created_at ? (
+                                    new Date(equipment.created_at).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })
+                                  ) : (
+                                    <span className="text-gray-400 italic">
+                                      Not Available
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {equipment.purchase_cost ||
+                                  equipment.purchaseCost ? (
+                                    `GHS ${Number(
+                                      equipment.purchase_cost ||
+                                        equipment.purchaseCost
+                                    ).toLocaleString()}`
+                                  ) : (
+                                    <span className="text-gray-400 italic">
+                                      Not Set
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`;
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger
+                                        asChild
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Button variant="ghost" size="sm">
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        {/* Status Change Options */}
+                                        {[
+                                          "operational",
+                                          "maintenance",
+                                          "broken",
+                                          "retired",
+                                        ].map((status) => {
+                                          const isCurrentStatus =
+                                            equipment.status === status;
+                                          const getTextColor = (s: string) => {
+                                            switch (s.toLowerCase()) {
+                                              case "operational":
+                                                return "text-green-600";
+                                              case "maintenance":
+                                                return "text-yellow-600";
+                                              case "broken":
+                                                return "text-red-600";
+                                              case "retired":
+                                                return "text-gray-600";
+                                              default:
+                                                return "text-gray-600";
+                                            }
+                                          };
+                                          return (
+                                            <DropdownMenuItem
+                                              key={status}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleStatusUpdate(
+                                                  equipment.id,
+                                                  status
+                                                );
+                                              }}
+                                              className={`flex items-center justify-between cursor-pointer ${
+                                                isCurrentStatus
+                                                  ? "bg-gray-100"
+                                                  : ""
+                                              }`}
+                                            >
+                                              <span
+                                                className={getTextColor(status)}
+                                              >
+                                                {status
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                                  status.slice(1)}
+                                                {isCurrentStatus && " ✓"}
+                                              </span>
+                                            </DropdownMenuItem>
+                                          );
+                                        })}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`;
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Add delete functionality here if needed
+                                          }}
+                                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          )
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={8}
+                              className="text-center py-6 text-muted-foreground"
+                            >
+                              {equipmentSearchTerm
+                                ? "No equipment found"
+                                : "No equipment in this department"}
                             </TableCell>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={7}
-                            className="text-center py-10 text-gray-500"
-                          >
-                            {equipmentSearchTerm
-                              ? "No equipment found"
-                              : "No equipment in this department"}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
 
                   {/* Pagination */}
                   <div className="flex items-center justify-between mt-4">

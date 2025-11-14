@@ -25,6 +25,8 @@ export interface DashboardStats {
     id?: number;
     equipment_id: number;
     equipment_name: string;
+    model?: string;
+    manufacturer?: string;
     due_date: string;
     maintenance_type?: string;
   }[];

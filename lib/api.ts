@@ -187,6 +187,18 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
     getById: (id: number) => fetchApi(`/equipment/${id}`),
+    bulkAssignDepartment: (departmentId: number, equipmentIds?: number[]) =>
+      fetchApi(`/equipment/bulk-assign-department`, {
+        method: "POST",
+        body: JSON.stringify({ departmentId, equipmentIds }),
+      }),
+    getSpecifications: (id: number) =>
+      fetchApi(`/equipment/${id}/specifications`),
+    saveSpecifications: (id: number, specifications: any[]) =>
+      fetchApi(`/equipment/${id}/specifications`, {
+        method: "POST",
+        body: JSON.stringify({ specifications }),
+      }),
   },
 
   maintenance: {
@@ -195,6 +207,8 @@ export const api = {
       department?: string;
       status?: string;
       type?: string;
+      page?: number;
+      limit?: number;
     }) => {
       const params = new URLSearchParams();
       if (filters) {

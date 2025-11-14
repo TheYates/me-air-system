@@ -506,10 +506,10 @@ export default function EquipmentPage() {
                       </TableHead>
                       <TableHead
                         className="cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("next_maintenance_date")}
+                        onClick={() => handleSort("created_at")}
                       >
-                        Next Maintenance{" "}
-                        {renderSortIcon("next_maintenance_date")}
+                        Date Added{" "}
+                        {renderSortIcon("created_at")}
                       </TableHead>
                       <TableHead
                         className="cursor-pointer hover:bg-gray-100"
@@ -582,22 +582,15 @@ export default function EquipmentPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {equipment.next_maintenance_date ? (
-                              <div className="flex items-center space-x-2">
-                                <Calendar className="h-4 w-4 text-orange-500" />
-                                <span>
-                                  {new Date(
-                                    equipment.next_maintenance_date
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              </div>
+                            {equipment.created_at ? (
+                              new Date(equipment.created_at).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
                             ) : (
                               <span className="text-gray-400 italic">
-                                Not Scheduled
+                                Not Available
                               </span>
                             )}
                           </TableCell>

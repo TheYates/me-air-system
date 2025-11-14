@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,9 @@ import {
   MapPin,
   Clock,
   Settings,
+  X,
+  Loader2,
+  Loader,
 } from "lucide-react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -76,6 +79,18 @@ export default function EquipmentDetailPage({
   const equipmentId = parseInt(id);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Get URL parameters for return navigation
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+  const [returnTab, setReturnTab] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      setReturnTo(searchParams.get('returnTo'));
+      setReturnTab(searchParams.get('returnTab'));
+    }
+  }, []);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
   const [isUploadDocDialogOpen, setIsUploadDocDialogOpen] = useState(false);
@@ -83,6 +98,9 @@ export default function EquipmentDetailPage({
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [isEditSpecsDialogOpen, setIsEditSpecsDialogOpen] = useState(false);
+  const [specifications, setSpecifications] = useState<any[]>([]);
+  const [isSavingSpecs, setIsSavingSpecs] = useState(false);
 
   // Fetch equipment details
   const { data: equipment, isLoading } = useQuery<Equipment>({
@@ -102,6 +120,22 @@ export default function EquipmentDetailPage({
     queryFn: () => api.maintenance.listByEquipment(equipmentId),
     enabled: !!equipment,
   });
+
+  // Fetch specifications for this equipment
+  const { data: fetchedSpecifications = [] } = useQuery({
+    queryKey: ["equipment", equipmentId, "specifications"],
+    queryFn: () => api.equipment.getSpecifications(equipmentId),
+    enabled: !!equipment,
+  });
+
+  // Update local specifications when fetched
+  useEffect(() => {
+    if (fetchedSpecifications.length > 0) {
+      setSpecifications(fetchedSpecifications);
+    } else {
+      setSpecifications([{ specificationKey: "", specificationValue: "" }]);
+    }
+  }, [fetchedSpecifications]);
 
   // Handle status update
   const handleStatusUpdate = async (newStatus: string) => {
@@ -145,6 +179,43 @@ export default function EquipmentDetailPage({
             : "An error occurred while updating the status",
         duration: 4000,
       });
+    }
+  };
+
+  // Handle save specifications
+  const handleSaveSpecifications = async () => {
+    if (!equipment) return;
+
+    try {
+      setIsSavingSpecs(true);
+
+      // Filter out empty specifications
+      const validSpecs = specifications.filter(
+        (spec) => spec.specificationKey && spec.specificationKey.trim() !== ""
+      );
+
+      await api.equipment.saveSpecifications(equipmentId, validSpecs);
+
+      // Invalidate cache to refetch
+      await queryClient.invalidateQueries({
+        queryKey: ["equipment", equipmentId, "specifications"],
+      });
+
+      sonnerToast.success("Specifications saved successfully!", {
+        duration: 3000,
+      });
+
+      setIsEditSpecsDialogOpen(false);
+    } catch (error) {
+      sonnerToast.error("Failed to save specifications", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while saving specifications",
+        duration: 4000,
+      });
+    } finally {
+      setIsSavingSpecs(false);
     }
   };
 
@@ -197,12 +268,22 @@ export default function EquipmentDetailPage({
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <Link href="/equipment">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  if (returnTo && returnTab) {
+                    // Navigate back to department with specific tab
+                    window.location.href = `${returnTo}?tab=${returnTab}`;
+                  } else {
+                    // Default navigation to equipment list
+                    window.location.href = "/equipment";
+                  }
+                }}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back {returnTo ? "to Department" : "to Equipment"}
+              </Button>
               <div className="flex items-center space-x-2">
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
@@ -321,7 +402,11 @@ export default function EquipmentDetailPage({
                       Warranty Status
                     </p>
                     <p className="text-lg font-bold text-green-600">
-                      {equipment.warranty_info ? "Active" : <span className="text-gray-400 italic">Not Set</span>}
+                      {equipment.warranty_info ? (
+                        "Active"
+                      ) : (
+                        <span className="text-gray-400 italic">Not Set</span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500">
                       {equipment.warranty_info
@@ -344,7 +429,11 @@ export default function EquipmentDetailPage({
                       {equipment.has_service_contract ? "Yes" : "No"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {equipment.service_organization || <span className="text-gray-400 italic">Not Specified</span>}
+                      {equipment.service_organization || (
+                        <span className="text-gray-400 italic">
+                          Not Specified
+                        </span>
+                      )}
                     </p>
                   </div>
                   <Users className="h-8 w-8 text-blue-500" />
@@ -366,7 +455,11 @@ export default function EquipmentDetailPage({
                         : "Not scheduled"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {upcomingMaintenance?.type || <span className="text-gray-400 italic">Not Specified</span>}
+                      {upcomingMaintenance?.type || (
+                        <span className="text-gray-400 italic">
+                          Not Specified
+                        </span>
+                      )}
                     </p>
                   </div>
                   <Calendar className="h-8 w-8 text-orange-500" />
@@ -411,7 +504,11 @@ export default function EquipmentDetailPage({
                           Tag Number
                         </p>
                         <p className="font-medium">
-                          {equipment.tag_number || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.tag_number || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -419,7 +516,11 @@ export default function EquipmentDetailPage({
                           Serial Number
                         </p>
                         <p className="font-medium">
-                          {equipment.serial_number || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.serial_number || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -427,7 +528,11 @@ export default function EquipmentDetailPage({
                           MFG Number
                         </p>
                         <p className="font-medium">
-                          {equipment.mfg_number || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.mfg_number || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -441,7 +546,11 @@ export default function EquipmentDetailPage({
                           Model
                         </p>
                         <p className="font-medium">
-                          {equipment.model || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.model || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -449,7 +558,11 @@ export default function EquipmentDetailPage({
                           Year Manufactured
                         </p>
                         <p className="font-medium">
-                          {equipment.year_of_manufacture || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.year_of_manufacture || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -457,7 +570,11 @@ export default function EquipmentDetailPage({
                           Country of Origin
                         </p>
                         <p className="font-medium">
-                          {equipment.country_of_origin || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.country_of_origin || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -486,7 +603,11 @@ export default function EquipmentDetailPage({
                           Sub-unit
                         </p>
                         <p className="font-medium">
-                          {equipment.sub_unit || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.sub_unit || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -494,7 +615,11 @@ export default function EquipmentDetailPage({
                           Owner
                         </p>
                         <p className="font-medium">
-                          {equipment.owner || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.owner || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -502,7 +627,11 @@ export default function EquipmentDetailPage({
                           Maintained By
                         </p>
                         <p className="font-medium">
-                          {equipment.maintained_by || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.maintained_by || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -523,10 +652,14 @@ export default function EquipmentDetailPage({
                           Purchase Type
                         </p>
                         <p className="font-medium">
-                          {equipment.purchase_type
-                            ? equipment.purchase_type.charAt(0).toUpperCase() +
-                              equipment.purchase_type.slice(1)
-                            : <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.purchase_type ? (
+                            equipment.purchase_type.charAt(0).toUpperCase() +
+                            equipment.purchase_type.slice(1)
+                          ) : (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -534,11 +667,15 @@ export default function EquipmentDetailPage({
                           Purchase Date
                         </p>
                         <p className="font-medium">
-                          {equipment.purchase_date
-                            ? new Date(
-                                equipment.purchase_date
-                              ).toLocaleDateString()
-                            : <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.purchase_date ? (
+                            new Date(
+                              equipment.purchase_date
+                            ).toLocaleDateString()
+                          ) : (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -546,11 +683,15 @@ export default function EquipmentDetailPage({
                           Installation Date
                         </p>
                         <p className="font-medium">
-                          {equipment.date_of_installation
-                            ? new Date(
-                                equipment.date_of_installation
-                              ).toLocaleDateString()
-                            : <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.date_of_installation ? (
+                            new Date(
+                              equipment.date_of_installation
+                            ).toLocaleDateString()
+                          ) : (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -558,11 +699,15 @@ export default function EquipmentDetailPage({
                           Purchase Value
                         </p>
                         <p className="font-medium">
-                          {equipment.purchase_cost
-                            ? `GHS ${Number(
-                                equipment.purchase_cost
-                              ).toLocaleString()}`
-                            : <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.purchase_cost ? (
+                            `GHS ${Number(
+                              equipment.purchase_cost
+                            ).toLocaleString()}`
+                          ) : (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -570,7 +715,11 @@ export default function EquipmentDetailPage({
                           PO Number
                         </p>
                         <p className="font-medium">
-                          {equipment.purchase_order_number || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.purchase_order_number || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -578,7 +727,11 @@ export default function EquipmentDetailPage({
                           Employee Number
                         </p>
                         <p className="font-medium">
-                          {equipment.employee_number || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.employee_number || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -612,22 +765,47 @@ export default function EquipmentDetailPage({
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span>Technical Specifications</span>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditSpecsDialogOpen(true)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Specifications
                     </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-10 text-gray-600">
-                    <p>
-                      Technical specifications will be available in a future
-                      update.
-                    </p>
-                    <p className="text-sm mt-2">
-                      This feature is under development.
-                    </p>
-                  </div>
+                  {specifications.length > 0 &&
+                  specifications.some(
+                    (spec) =>
+                      spec.specificationKey &&
+                      spec.specificationKey.trim() !== ""
+                  ) ? (
+                    <div className="space-y-4">
+                      {specifications.map((spec, index) => (
+                        <div key={index}>
+                          {spec.specificationKey && (
+                            <>
+                              <p className="text-sm font-medium text-gray-600">
+                                {spec.specificationKey}
+                              </p>
+                              <p className="font-medium text-sm">
+                                {spec.specificationValue || "Not Specified"}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 text-gray-600">
+                      <p>No technical specifications added yet.</p>
+                      <p className="text-sm mt-2">
+                        Click "Edit Specifications" to add specifications.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -662,7 +840,11 @@ export default function EquipmentDetailPage({
                           Service Organization
                         </p>
                         <p className="font-medium">
-                          {equipment.service_organization || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.service_organization || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -670,7 +852,11 @@ export default function EquipmentDetailPage({
                           Contact Information
                         </p>
                         <p className="font-medium text-sm">
-                          {equipment.contact_info || <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.contact_info || (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -794,15 +980,23 @@ export default function EquipmentDetailPage({
                             {maintenanceRecords.map((record) => (
                               <TableRow key={record.id}>
                                 <TableCell>
-                                  {record.date
-                                    ? new Date(record.date).toLocaleDateString()
-                                    : <span className="text-gray-400 italic">Not Specified</span>}
+                                  {record.date ? (
+                                    new Date(record.date).toLocaleDateString()
+                                  ) : (
+                                    <span className="text-gray-400 italic">
+                                      Not Specified
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  {record.type
-                                    ? record.type.charAt(0).toUpperCase() +
-                                      record.type.slice(1)
-                                    : <span className="text-gray-400 italic">Not Specified</span>}
+                                  {record.type ? (
+                                    record.type.charAt(0).toUpperCase() +
+                                    record.type.slice(1)
+                                  ) : (
+                                    <span className="text-gray-400 italic">
+                                      Not Specified
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   {record.technician || "Not Assigned"}
@@ -906,11 +1100,13 @@ export default function EquipmentDetailPage({
                         <p className="font-medium">Equipment Photo</p>
                         <p className="text-sm text-gray-600">
                           Uploaded{" "}
-                          {equipment.created_at
-                            ? new Date(
-                                equipment.created_at
-                              ).toLocaleDateString()
-                            : <span className="text-gray-400 italic">Not Specified</span>}
+                          {equipment.created_at ? (
+                            new Date(equipment.created_at).toLocaleDateString()
+                          ) : (
+                            <span className="text-gray-400 italic">
+                              Not Specified
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1004,11 +1200,15 @@ export default function EquipmentDetailPage({
                             Service Contract Activated
                           </p>
                           <p className="text-sm text-gray-600">
-                            {equipment.created_at
-                              ? new Date(
-                                  equipment.created_at
-                                ).toLocaleDateString()
-                              : <span className="text-gray-400 italic">Not Specified</span>}{" "}
+                            {equipment.created_at ? (
+                              new Date(
+                                equipment.created_at
+                              ).toLocaleDateString()
+                            ) : (
+                              <span className="text-gray-400 italic">
+                                Not Specified
+                              </span>
+                            )}{" "}
                             •{" "}
                             {equipment.service_organization ||
                               "Service Provider"}
@@ -1196,6 +1396,98 @@ export default function EquipmentDetailPage({
               disabled={uploadingPhoto}
             >
               {uploadingPhoto ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Specifications Dialog */}
+      <Dialog
+        open={isEditSpecsDialogOpen}
+        onOpenChange={setIsEditSpecsDialogOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Technical Specifications</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {specifications.map((spec, index) => (
+              <div key={index} className="space-y-2 p-4 border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <Label>Specification {index + 1}</Label>
+                  {specifications.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSpecifications(
+                          specifications.filter((_, i) => i !== index)
+                        );
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-gray-600">Key</Label>
+                    <Input
+                      placeholder="e.g., Power Consumption"
+                      value={spec.specificationKey || ""}
+                      onChange={(e) => {
+                        const newSpecs = [...specifications];
+                        newSpecs[index].specificationKey = e.target.value;
+                        setSpecifications(newSpecs);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-600">Value</Label>
+                    <Input
+                      placeholder="e.g., 500W"
+                      value={spec.specificationValue || ""}
+                      onChange={(e) => {
+                        const newSpecs = [...specifications];
+                        newSpecs[index].specificationValue = e.target.value;
+                        setSpecifications(newSpecs);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setSpecifications([
+                  ...specifications,
+                  { specificationKey: "", specificationValue: "" },
+                ]);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Specification
+            </Button>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditSpecsDialogOpen(false)}
+              disabled={isSavingSpecs}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSpecifications} disabled={isSavingSpecs}>
+              {isSavingSpecs ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Specifications"
+              )}
             </Button>
           </div>
         </DialogContent>

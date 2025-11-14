@@ -98,19 +98,23 @@ export default function MaintenancePage() {
   const equipmentList = equipmentResponse?.data || [];
 
   // Filter maintenance data
-  const filteredMaintenance = maintenanceData.filter((maintenance) => {
-    const matchesSearch =
-      maintenance.equipment_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      maintenance.id
-        ?.toString()
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      maintenance.technician?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMaintenance = maintenanceData.filter(
+    (maintenance: MaintenanceRecord) => {
+      const matchesSearch =
+        maintenance.equipment_name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        maintenance.id
+          ?.toString()
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        maintenance.technician
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase());
 
-    return matchesSearch;
-  });
+      return matchesSearch;
+    }
+  );
 
   // Handle column sorting
   const handleSort = (column: string) => {
@@ -153,11 +157,18 @@ export default function MaintenancePage() {
 
   // Calculate stats
   const stats = {
-    scheduled: maintenanceData.filter((m) => m.status === "scheduled").length,
-    inProgress: maintenanceData.filter((m) => m.status === "in-progress")
-      .length,
-    completed: maintenanceData.filter((m) => m.status === "completed").length,
-    cancelled: maintenanceData.filter((m) => m.status === "cancelled").length,
+    scheduled: maintenanceData.filter(
+      (m: MaintenanceRecord) => m.status === "scheduled"
+    ).length,
+    inProgress: maintenanceData.filter(
+      (m: MaintenanceRecord) => m.status === "in-progress"
+    ).length,
+    completed: maintenanceData.filter(
+      (m: MaintenanceRecord) => m.status === "completed"
+    ).length,
+    cancelled: maintenanceData.filter(
+      (m: MaintenanceRecord) => m.status === "cancelled"
+    ).length,
   };
 
   const MaintenanceForm = ({
@@ -170,7 +181,7 @@ export default function MaintenancePage() {
     <div className="grid grid-cols-2 gap-4 py-4 max-h-96 overflow-y-auto">
       <div className="space-y-2">
         <Label htmlFor="equipment">Equipment *</Label>
-        <Select defaultValue={maintenance?.equipment_id?.toString()}>
+        <Select defaultValue={maintenance?.equipmentId?.toString()}>
           <SelectTrigger>
             <SelectValue placeholder="Select equipment" />
           </SelectTrigger>
@@ -246,7 +257,7 @@ export default function MaintenancePage() {
         <Input
           id="duration"
           placeholder="e.g., 2 hours"
-          defaultValue={maintenance?.estimated_duration}
+          defaultValue={maintenance?.estimatedDuration}
         />
       </div>
       <div className="col-span-2 space-y-2">
@@ -470,10 +481,11 @@ export default function MaintenancePage() {
                               {maintenance.equipment_name || "N/A"}
                             </div>
                             <div className="text-sm text-gray-600">
-                              EQ-
-                              {maintenance.equipment_id
-                                ?.toString()
-                                .padStart(3, "0") || "N/A"}
+                              {maintenance.equipmentId
+                                ? `EQ-${maintenance.equipmentId
+                                    .toString()
+                                    .padStart(3, "0")}`
+                                : "N/A"}
                             </div>
                           </div>
                         </TableCell>

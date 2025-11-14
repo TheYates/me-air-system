@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { maintenance, equipment, departments } from "@/db/schema";
-import { sql, eq, and, ilike, desc } from "drizzle-orm";
+import { sql, eq, and, ilike, desc, isNull } from "drizzle-orm";
 import { addCorsHeaders } from "@/lib/cors";
 
 export async function GET(request: NextRequest) {
@@ -33,8 +33,11 @@ export async function GET(request: NextRequest) {
         actualDuration: maintenance.actualDuration,
         createdAt: maintenance.createdAt,
         updatedAt: maintenance.updatedAt,
+        equipment_name: sql<string | null>`${equipment.name}`,
+        tag_number: sql<string | null>`${equipment.tagNumber}`,
       })
-      .from(maintenance);
+      .from(maintenance)
+      .leftJoin(equipment, eq(maintenance.equipmentId, equipment.id));
 
     // Apply filters
     const conditions = [];
@@ -54,12 +57,16 @@ export async function GET(request: NextRequest) {
     if (upcoming === "true") {
       const today = new Date();
       conditions.push(
-        sql`${maintenance.scheduledDate} >= ${today} AND ${maintenance.scheduledDate} <= ${new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)}`
+        sql`${maintenance.scheduledDate} >= ${today} AND ${
+          maintenance.scheduledDate
+        } <= ${new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)}`
       );
     }
 
     // Count total before pagination
-    let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(maintenance);
+    let countQuery = db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(maintenance);
     if (conditions.length > 0) {
       countQuery = countQuery.where(and(...conditions)) as any;
     }
@@ -84,7 +91,7 @@ export async function GET(request: NextRequest) {
       limit: limit,
       totalPages: Math.ceil(total / limit),
     });
-    
+
     // Cache maintenance records for 5 minutes
     response.headers.set(
       "Cache-Control",
@@ -98,7 +105,10 @@ export async function GET(request: NextRequest) {
       { error: "Failed to fetch maintenance records" },
       { status: 500 }
     );
-    errorResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    errorResponse.headers.set(
+      "Cache-Control",
+      "no-cache, no-store, must-revalidate"
+    );
     return errorResponse;
   }
 }
@@ -114,7 +124,11 @@ export async function POST(request: NextRequest) {
         type: body.type || body.maintenanceType, // Support both field names
         description: body.description,
         technician: body.technician || body.performedBy, // Support both field names
-        date: body.date ? new Date(body.date) : (body.performedDate ? new Date(body.performedDate) : new Date()),
+        date: body.date
+          ? new Date(body.date)
+          : body.performedDate
+          ? new Date(body.performedDate)
+          : new Date(),
         scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : null,
         completedDate: body.completedDate ? new Date(body.completedDate) : null,
         cost: body.cost,
@@ -136,7 +150,10 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json(result[0], { status: 201 });
-    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    response.headers.set(
+      "Cache-Control",
+      "no-cache, no-store, must-revalidate"
+    );
     return addCorsHeaders(response, request);
   } catch (error) {
     console.error("Error creating maintenance record:", error);
@@ -151,4 +168,3 @@ export async function POST(request: NextRequest) {
 export async function OPTIONS(request: NextRequest) {
   return addCorsHeaders(new NextResponse(null, { status: 204 }), request);
 }
-

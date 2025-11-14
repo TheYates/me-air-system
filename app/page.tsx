@@ -19,25 +19,90 @@ import { PieChartComponent } from "@/components/charts/pie-chart";
 import { BarChartComponent } from "@/components/charts/bar-chart";
 import { LineChartComponent } from "@/components/charts/line-chart";
 
-// Mock data for Maintenance Trends (will be implemented later)
-const maintenanceTrendData = [
-  { month: "Jan", completed: 45, scheduled: 52 },
-  { month: "Feb", completed: 52, scheduled: 48 },
-  { month: "Mar", completed: 48, scheduled: 61 },
-  { month: "Apr", completed: 61, scheduled: 55 },
-  { month: "May", completed: 55, scheduled: 67 },
-  { month: "Jun", completed: 67, scheduled: 43 },
-];
+// Helper function to generate maintenance trend data from real data
+const generateMaintenanceTrends = (maintenanceRecords: any[]) => {
+  // Month names for labels
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  // Get last 6 months
+  const months: { [key: string]: { completed: number; scheduled: number } } =
+    {};
+  const now = new Date();
+
+  // Initialize last 6 months using simple month/year keys
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const monthKey = `${year}-${month}`;
+    months[monthKey] = { completed: 0, scheduled: 0 };
+  }
+
+  // Count maintenance records by month and status
+  maintenanceRecords.forEach((record: any) => {
+    // Get the date from the record, handling various formats
+    let recordDate: Date | null = null;
+    const dateValue =
+      record.completedDate || record.scheduledDate || record.date;
+
+    if (dateValue) {
+      recordDate = new Date(dateValue);
+      // Check if date is valid
+      if (isNaN(recordDate.getTime())) {
+        recordDate = null;
+      }
+    }
+
+    if (recordDate) {
+      const year = recordDate.getFullYear();
+      const month = recordDate.getMonth();
+      const monthKey = `${year}-${month}`;
+
+      if (months[monthKey]) {
+        if (record.status === "completed") {
+          months[monthKey].completed++;
+        } else if (record.status === "scheduled") {
+          months[monthKey].scheduled++;
+        }
+      }
+    }
+  });
+
+  // Convert to array format for chart
+  return Object.entries(months).map(([monthKey, data]) => {
+    const [, monthNum] = monthKey.split("-");
+    const monthIndex = parseInt(monthNum);
+    const monthName = monthNames[monthIndex];
+
+    return {
+      month: monthName,
+      completed: data.completed,
+      scheduled: data.scheduled,
+    };
+  });
+};
 
 // Fallback data for testing
 const FALLBACK_STATS: DashboardStats = {
   totalEquipment: 689,
-  operational: 612,
   underMaintenance: 45,
-  broken: 32,
-  totalDepartments: 16,
-  maintenanceRecords: 247,
+  warrantyExpiring: 12,
+  serviceDue: 12,
   equipmentValue: 2500000,
+  averageEquipmentAge: null,
   statusBreakdown: {
     operational: 612,
     maintenance: 45,
@@ -51,7 +116,11 @@ const FALLBACK_STATS: DashboardStats = {
   ],
   recentActivities: [],
   upcomingMaintenance: [],
-  serviceDue: 12,
+  pagination: {
+    total: 689,
+    page: 1,
+    limit: 20,
+  },
 };
 
 export default function Dashboard() {
@@ -78,6 +147,16 @@ export default function Dashboard() {
     queryFn: () => api.departments.list(),
     retry: 1,
   });
+
+  // Fetch all maintenance records for trend data
+  const { data: maintenanceResponse } = useQuery({
+    queryKey: ["maintenance-all"],
+    queryFn: () => api.maintenance.list({ page: 1, limit: 1000 }),
+    retry: 1,
+  });
+
+  const maintenanceRecords = maintenanceResponse?.data || [];
+  const maintenanceTrendData = generateMaintenanceTrends(maintenanceRecords);
 
   // Transform statusBreakdown into chart data
   // Filter out zero values to improve chart visibility
@@ -301,7 +380,11 @@ export default function Dashboard() {
                             {item.equipment_name}
                           </div>
                           <div className="text-sm text-gray-600">
-                            ID: {item.equipment_id}
+                            {item.manufacturer && item.model
+                              ? `${item.manufacturer} - ${item.model}`
+                              : item.manufacturer ||
+                                item.model ||
+                                "Not Specified"}
                           </div>
                         </div>
                         <div className="text-right">

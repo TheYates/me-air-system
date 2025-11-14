@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { departments } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { departments, equipment, maintenance } from "@/db/schema";
+import { eq, desc, sql, count, sum } from "drizzle-orm";
 
 // GET all departments
 export async function GET(request: Request) {
@@ -27,10 +27,49 @@ export async function GET(request: Request) {
       return NextResponse.json(department[0]);
     }
 
-    // Get all departments
+    // Get all departments with counts
     const allDepartments = await db
-      .select()
+      .select({
+        id: departments.id,
+        name: departments.name,
+        manager: departments.manager,
+        email: departments.email,
+        phone: departments.phone,
+        description: departments.description,
+        sub_units: departments.subUnits,
+        budget: departments.budget,
+        employees: departments.employees,
+        createdAt: departments.createdAt,
+        updatedAt: departments.updatedAt,
+        equipment_count: sql<number>`COALESCE(eq_counts.equipment_count, 0)`,
+        maintenance_count: sql<number>`COALESCE(maint_counts.maintenance_count, 0)`,
+        total_value: sql<number>`COALESCE(eq_counts.total_value, 0)`
+      })
       .from(departments)
+      .leftJoin(
+        sql`(
+          SELECT 
+            department_id,
+            COUNT(*) as equipment_count,
+            COALESCE(SUM(CAST(purchase_cost AS NUMERIC)), 0) as total_value
+          FROM equipment 
+          WHERE department_id IS NOT NULL 
+          GROUP BY department_id
+        ) eq_counts`,
+        sql`eq_counts.department_id = ${departments.id}`
+      )
+      .leftJoin(
+        sql`(
+          SELECT 
+            e.department_id,
+            COUNT(m.*) as maintenance_count
+          FROM maintenance m
+          JOIN equipment e ON m.equipment_id = e.id
+          WHERE e.department_id IS NOT NULL
+          GROUP BY e.department_id
+        ) maint_counts`,
+        sql`maint_counts.department_id = ${departments.id}`
+      )
       .orderBy(desc(departments.createdAt));
 
     return NextResponse.json(allDepartments);
