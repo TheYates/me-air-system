@@ -225,7 +225,7 @@ export default function EquipmentDetailPage({
 
   if (!equipment) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-background">
         <Navigation />
         <div className="flex-1 flex flex-col items-center justify-center">
           <h1 className="text-2xl font-bold">Equipment Not Found</h1>
@@ -259,7 +259,7 @@ export default function EquipmentDetailPage({
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-background">
       <Navigation />
 
       {/* Main Content */}
@@ -301,10 +301,10 @@ export default function EquipmentDetailPage({
             </div>
             <div className="flex items-start justify-between mt-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {equipment.name}
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   EQ-{equipment.id.toString().padStart(3, "0")} •{" "}
                   {equipment.tag_number} • {equipment.manufacturer}{" "}
                   {equipment.model || ""}
@@ -373,7 +373,7 @@ export default function EquipmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Purchase Value
                     </p>
                     <p className="text-2xl font-bold">
@@ -398,7 +398,7 @@ export default function EquipmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Warranty Status
                     </p>
                     <p className="text-lg font-bold text-green-600">
@@ -422,7 +422,7 @@ export default function EquipmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Service Contract
                     </p>
                     <p className="text-lg font-bold text-blue-600">
@@ -444,7 +444,7 @@ export default function EquipmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Next Maintenance
                     </p>
                     <p className="text-lg font-bold">

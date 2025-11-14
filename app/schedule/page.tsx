@@ -40,7 +40,7 @@ export default function SchedulePage() {
   // Fetch maintenance data from backend
   const { data: maintenanceResponse, isLoading } = useQuery({
     queryKey: ["maintenance-schedule"],
-    queryFn: () => api.maintenance.list({}),
+    queryFn: () => api.maintenance.list({}),  
   });
 
   const maintenanceData = maintenanceResponse?.data || [];
@@ -101,7 +101,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
 
       {/* Main Content */}
@@ -110,15 +110,13 @@ export default function SchedulePage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Maintenance Schedule
               </h1>
-              <Badge variant="secondary">
-                {scheduledTasks.length} scheduled tasks
-              </Badge>
+              
             </div>
             <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1 bg-white rounded-lg border">
+              <div className="flex items-center space-x-1 bg-white rounded-lg border dark:bg-background">
                 <Button
                   variant={viewMode === "week" ? "default" : "ghost"}
                   size="sm"
@@ -266,7 +264,7 @@ export default function SchedulePage() {
                   scheduledTasks.map((task: any) => (
                     <div
                       key={task.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-muted rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
@@ -326,7 +324,7 @@ export default function SchedulePage() {
 
 function ScheduleSkeleton() {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto p-6">

@@ -145,15 +145,15 @@ export default function ReportsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Operational":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "Under Maintenance":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "Broken":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "Retired":
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
     }
   };
 
@@ -263,18 +263,18 @@ export default function ReportsPage() {
                   return (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
                     >
                       <div className="flex items-center space-x-2">
                         <div
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="font-medium">{item.name}</span>
+                        <span className="font-medium text-foreground">{item.name}</span>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold">{item.value}</div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-lg font-bold text-foreground">{item.value}</div>
+                        <div className="text-xs text-muted-foreground">
                           {percentage}%
                         </div>
                       </div>
@@ -291,11 +291,11 @@ export default function ReportsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
                   Select a Report
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Choose a report type from the list above to generate and view
                   the report.
                 </p>
@@ -307,7 +307,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto p-6">
@@ -325,8 +325,8 @@ export default function ReportsPage() {
                       key={report.id}
                       className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
                         selectedReport === report.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-muted-foreground"
                       }`}
                       onClick={() => setSelectedReport(report.id)}
                     >
@@ -334,15 +334,15 @@ export default function ReportsPage() {
                         <IconComponent
                           className={`h-6 w-6 mt-1 ${
                             selectedReport === report.id
-                              ? "text-blue-600"
-                              : "text-gray-500"
+                              ? "text-primary"
+                              : "text-muted-foreground"
                           }`}
                         />
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">
+                          <h3 className="font-medium text-foreground">
                             {report.name}
                           </h3>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             {report.description}
                           </p>
                           <Badge variant="secondary" className="mt-2">
@@ -369,7 +369,7 @@ export default function ReportsPage() {
               <CardContent>
                 <div className="flex flex-wrap gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Date Range</label>
+                    <label className="text-sm font-medium text-foreground">Date Range</label>
                     <Select value={dateRange} onValueChange={setDateRange}>
                       <SelectTrigger className="w-48">
                         <SelectValue />
@@ -388,7 +388,7 @@ export default function ReportsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Department</label>
+                    <label className="text-sm font-medium text-foreground">Department</label>
                     <Select value={department} onValueChange={setDepartment}>
                       <SelectTrigger className="w-48">
                         <SelectValue />

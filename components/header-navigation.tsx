@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: TrendingUp },
@@ -33,14 +34,14 @@ export function HeaderNavigation() {
   const pathname = usePathname();
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <Wrench className="h-8 w-8 text-blue-600" />
+            <Wrench className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">ME-AIR</h1>
+              <h1 className="text-2xl font-bold text-foreground">ME-AIR</h1>
               <Badge variant="secondary" className="text-xs">
                 Equipment Maintenance System
               </Badge>
@@ -67,31 +68,34 @@ export function HeaderNavigation() {
             })}
           </nav>
 
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center space-x-2">
-                <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  JD
-                </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-gray-500">Administrator</p>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <User className="h-4 w-4 mr-2" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem>Sign out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* User Menu and Theme Toggle */}
+          <div className="flex items-center space-x-2">
+            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium">
+                    JD
+                  </div>
+                  <div className="hidden md:block text-left">
+                    <p className="text-sm font-medium text-foreground">John Doe</p>
+                    <p className="text-xs text-muted-foreground">Administrator</p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem>Sign out</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Mobile Navigation */}
           <div className="md:hidden">

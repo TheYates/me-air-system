@@ -331,7 +331,7 @@ export default function DepartmentsPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
 
       {/* Main Content */}
@@ -340,7 +340,7 @@ export default function DepartmentsPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Department Management
               </h1>
               <Badge variant="secondary">
@@ -828,7 +828,7 @@ export default function DepartmentsPage() {
 
 function DepartmentsSkeleton() {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto p-6">

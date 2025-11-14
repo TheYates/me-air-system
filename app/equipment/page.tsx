@@ -39,6 +39,7 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
+  Printer,
 } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 import { useRouter } from "next/navigation";
@@ -97,6 +98,18 @@ export default function EquipmentPage() {
     id: number;
     name: string;
   } | null>(null);
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+  const [printColumns, setPrintColumns] = useState({
+    name: true,
+    manufacturer: true,
+    department: true,
+    subUnit: true,
+    status: true,
+    dateAdded: true,
+    value: true,
+    tagNumber: false,
+    lastMaintenance: false,
+  });
 
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -328,6 +341,22 @@ export default function EquipmentPage() {
     return sortDirection === "asc" ? comparison : -comparison;
   });
 
+  // Get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "operational":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "maintenance":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "broken":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "retired":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
+
   // Render sort icon
   const renderSortIcon = (column: string) => {
     if (sortColumn !== column) {
@@ -340,13 +369,117 @@ export default function EquipmentPage() {
     );
   };
 
+  // Open print dialog
+  const handlePrintClick = () => {
+    setIsPrintDialogOpen(true);
+  };
+
+  // Print functionality with selected columns
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const currentDate = new Date().toLocaleDateString();
+    const totalEquipment = sortedEquipmentData.length;
+
+    // Build headers based on selected columns
+    const headers = [];
+    if (printColumns.name) headers.push('Equipment Name');
+    if (printColumns.tagNumber) headers.push('Tag Number');
+    if (printColumns.manufacturer) headers.push('Manufacturer');
+    if (printColumns.department) headers.push('Department');
+    if (printColumns.subUnit) headers.push('Sub Unit');
+    if (printColumns.status) headers.push('Status');
+    if (printColumns.lastMaintenance) headers.push('Last Maintenance');
+    if (printColumns.dateAdded) headers.push('Date Added');
+    if (printColumns.value) headers.push('Value (GHS)');
+
+    // Build rows based on selected columns
+    const buildRow = (equipment: Equipment) => {
+      const cells = [];
+      if (printColumns.name) cells.push(equipment.name);
+      if (printColumns.tagNumber) cells.push(equipment.tag_number || equipment.tagNumber || 'Not Set');
+      if (printColumns.manufacturer) cells.push(`${equipment.manufacturer} ${equipment.model || ''}`);
+      if (printColumns.department) cells.push(equipment.department_name || 'Unassigned');
+      if (printColumns.subUnit) cells.push(equipment.sub_unit || equipment.subUnit || 'Not Specified');
+      if (printColumns.status) cells.push(equipment.status ? equipment.status.charAt(0).toUpperCase() + equipment.status.slice(1) : 'Unknown');
+      if (printColumns.lastMaintenance) cells.push(equipment.last_service_date ? new Date(equipment.last_service_date).toLocaleDateString() : 'Not Set');
+      if (printColumns.dateAdded) cells.push(equipment.createdAt || equipment.created_at ? new Date(equipment.createdAt || equipment.created_at!).toLocaleDateString() : 'Not Available');
+      if (printColumns.value) cells.push(equipment.purchase_cost ? `${Number(equipment.purchase_cost).toLocaleString()}` : 'Not Set');
+      return cells;
+    };
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Equipment Inventory Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .summary { margin-bottom: 20px; padding: 10px; background-color: #f0f0f0; }
+            .print-date { font-size: 12px; color: #666; }
+            @media print { button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>Equipment Inventory Report</h1>
+          <div class="header">
+            <div class="summary">
+              <strong>Total Equipment: ${totalEquipment}</strong><br>
+              Status Filter: ${statusFilter === 'all' ? 'All Status' : statusFilter}<br>
+              Department Filter: ${departmentFilter === 'all' ? 'All Departments' : 
+                departments?.find(d => d.id.toString() === departmentFilter)?.name || 'All Departments'}
+            </div>
+            <div class="print-date">
+              Generated on: ${currentDate}
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                ${headers.map(header => `<th>${header}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${sortedEquipmentData.map(equipment => `
+                <tr>
+                  ${buildRow(equipment).map(cell => `<td>${cell}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              };
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    setIsPrintDialogOpen(false);
+  };
+
   // Only show skeleton on initial load, not during refetches
   if (isLoadingEquipment && !equipmentResponse) {
     return <EquipmentSkeleton />;
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
 
       {/* Main Content */}
@@ -355,11 +488,20 @@ export default function EquipmentPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">
                 Equipment Management
               </h1>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintClick}
+                className="text-xs sm:text-sm"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Print</span>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -393,10 +535,10 @@ export default function EquipmentPage() {
           {/* Filters */}
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
                       placeholder="Search equipment..."
                       value={searchInput}
@@ -408,14 +550,14 @@ export default function EquipmentPage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 lg:gap-2">
                   <Select
                     value={statusFilter}
                     onValueChange={(value) =>
                       handleFilterChange(setStatusFilter, value)
                     }
                   >
-                    <SelectTrigger className="w-full sm:w-48">
+                    <SelectTrigger className="w-full sm:w-48 lg:w-40">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -434,7 +576,7 @@ export default function EquipmentPage() {
                       handleFilterChange(setDepartmentFilter, value)
                     }
                   >
-                    <SelectTrigger className="w-full sm:w-48">
+                    <SelectTrigger className="w-full sm:w-48 lg:w-44">
                       <SelectValue placeholder="Filter by department" />
                     </SelectTrigger>
                     <SelectContent>
@@ -453,7 +595,7 @@ export default function EquipmentPage() {
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-full sm:w-40">
+                    <SelectTrigger className="w-full sm:w-32 lg:w-28">
                       <SelectValue placeholder="Items per page" />
                     </SelectTrigger>
                     <SelectContent>
@@ -481,38 +623,38 @@ export default function EquipmentPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead
-                        className="cursor-pointer hover:bg-gray-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort("name")}
                       >
                         Name {renderSortIcon("name")}
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-gray-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort("department_name")}
                       >
                         Department {renderSortIcon("department_name")}
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-gray-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort("status")}
                       >
                         Status {renderSortIcon("status")}
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-gray-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort("last_service_date")}
                       >
                         Last Maintenance {renderSortIcon("last_service_date")}
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort("created_at")}
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => handleSort("createdAt")}
                       >
                         Date Added{" "}
-                        {renderSortIcon("created_at")}
+                        {renderSortIcon("createdAt")}
                       </TableHead>
                       <TableHead
-                        className="cursor-pointer hover:bg-gray-100"
+                        className="cursor-pointer hover:bg-muted"
                         onClick={() => handleSort("purchase_cost")}
                       >
                         Value {renderSortIcon("purchase_cost")}
@@ -525,7 +667,7 @@ export default function EquipmentPage() {
                       sortedEquipmentData.map((equipment: Equipment) => (
                         <TableRow
                           key={equipment.id}
-                          className="cursor-pointer hover:bg-gray-50 transition-colors"
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() =>
                             router.push(`/equipment/${equipment.id}`)
                           }
@@ -535,7 +677,7 @@ export default function EquipmentPage() {
                               <div className="font-medium">
                                 {equipment.name}
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-muted-foreground">
                                 {equipment.manufacturer} {equipment.model || ""}
                               </div>
                             </div>
@@ -545,9 +687,9 @@ export default function EquipmentPage() {
                               <div>
                                 {equipment.department_name || "Unassigned"}
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-muted-foreground">
                                 {equipment.sub_unit || (
-                                  <span className="text-gray-400 italic">
+                                  <span className="text-muted-foreground italic">
                                     Not Specified
                                   </span>
                                 )}
@@ -576,20 +718,20 @@ export default function EquipmentPage() {
                                 day: "numeric",
                               })
                             ) : (
-                              <span className="text-gray-400 italic">
+                              <span className="text-muted-foreground italic">
                                 Not Set
                               </span>
                             )}
                           </TableCell>
                           <TableCell>
-                            {equipment.created_at ? (
-                              new Date(equipment.created_at).toLocaleDateString("en-US", {
+                            {equipment.createdAt || equipment.created_at ? (
+                              new Date(equipment.createdAt || equipment.created_at!).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "short",
                                 day: "numeric",
                               })
                             ) : (
-                              <span className="text-gray-400 italic">
+                              <span className="text-muted-foreground italic">
                                 Not Available
                               </span>
                             )}
@@ -600,7 +742,7 @@ export default function EquipmentPage() {
                                 equipment.purchase_cost
                               ).toLocaleString()}`
                             ) : (
-                              <span className="text-gray-400 italic">
+                              <span className="text-muted-foreground italic">
                                 Not Set
                               </span>
                             )}
@@ -667,7 +809,7 @@ export default function EquipmentPage() {
                                           );
                                         }}
                                         className={`flex items-center justify-between cursor-pointer ${
-                                          isCurrentStatus ? "bg-gray-100" : ""
+                                          isCurrentStatus ? "bg-muted" : ""
                                         }`}
                                       >
                                         <span className={getTextColor(status)}>
@@ -724,7 +866,7 @@ export default function EquipmentPage() {
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-3 md:px-6 py-4 border-t">
-                    <div className="text-xs md:text-sm text-gray-600 text-center md:text-left">
+                    <div className="text-xs md:text-sm text-muted-foreground text-center md:text-left">
                       Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                       {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
                       {totalItems} items
@@ -810,6 +952,145 @@ export default function EquipmentPage() {
         queryClient={queryClient}
         toast={toast}
       />
+
+      {/* Print Column Selection Dialog */}
+      <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Columns to Print</DialogTitle>
+            <DialogDescription>
+              Choose which columns to include in your equipment report.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="name"
+                  checked={printColumns.name}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, name: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="name">Equipment Name</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="tagNumber"
+                  checked={printColumns.tagNumber}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, tagNumber: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="tagNumber">Tag Number</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="manufacturer"
+                  checked={printColumns.manufacturer}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, manufacturer: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="manufacturer">Manufacturer</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="department"
+                  checked={printColumns.department}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, department: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="department">Department</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="subUnit"
+                  checked={printColumns.subUnit}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, subUnit: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="subUnit">Sub Unit</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="status"
+                  checked={printColumns.status}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, status: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="status">Status</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="lastMaintenance"
+                  checked={printColumns.lastMaintenance}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, lastMaintenance: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="lastMaintenance">Last Maintenance</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="dateAdded"
+                  checked={printColumns.dateAdded}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, dateAdded: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="dateAdded">Date Added</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="value"
+                  checked={printColumns.value}
+                  onCheckedChange={(checked) =>
+                    setPrintColumns(prev => ({ ...prev, value: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="value">Value (GHS)</Label>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between gap-3 pt-4">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPrintColumns({
+                  name: true,
+                  manufacturer: true,
+                  department: true,
+                  subUnit: true,
+                  status: true,
+                  dateAdded: true,
+                  value: true,
+                  tagNumber: false,
+                  lastMaintenance: false,
+                })}
+              >
+                Reset to Default
+              </Button>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsPrintDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print Report
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -1639,7 +1920,7 @@ function BulkAddEquipmentDialog({
         <div className="flex-1 overflow-auto">
           <div className="min-w-full overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="bg-muted sticky top-0">
                 <tr>
                   <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[40px]">
                     #
@@ -1724,7 +2005,7 @@ function BulkAddEquipmentDialog({
               </thead>
               <tbody>
                 {excelRows.map((row, index) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
+                  <tr key={row.id} className="hover:bg-muted/50">
                     <td className="border border-gray-300 p-1 text-center text-sm font-medium">
                       {index + 1}
                     </td>
@@ -2134,7 +2415,7 @@ function BulkAddEquipmentDialog({
 
 function EquipmentSkeleton() {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto p-6">
