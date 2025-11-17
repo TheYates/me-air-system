@@ -1922,83 +1922,83 @@ function BulkAddEquipmentDialog({
             <table className="w-full border-collapse border border-gray-300">
               <thead className="bg-muted sticky top-0">
                 <tr>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[40px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[40px]">
                     #
                   </th>
                   {/* Basic Information */}
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[200px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[200px]">
                     Equipment Name *
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[120px]">
                     Tag Number *
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[100px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
                     Year Mfg
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[120px]">
                     Install Date
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[150px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[150px]">
                     Manufacturer *
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[120px]">
                     Country
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[120px]">
                     Owner
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[140px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[140px]">
                     Maintained By
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[200px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[200px]">
                     Warranty Info
                   </th>
                   {/* Location & Model */}
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[140px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[140px]">
                     Department *
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[140px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[140px]">
                     Sub Unit
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Model
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     MFG Number
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[140px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[140px]">
                     Serial Number *
                   </th>
                   {/* Costs */}
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Purchase Type *
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Purchase Date
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Cost (GHS)
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[140px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[140px]">
                     PO Number
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Lease ID
                   </th>
                   {/* Service */}
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Service Contract
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[160px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[160px]">
                     Service Org
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[140px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[140px]">
                     Contact Info
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[120px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[120px]">
                     Employee #
                   </th>
-                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 min-w-[80px]">
+                  <th className="border border-gray-300 p-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300  min-w-[80px]">
                     Actions
                   </th>
                 </tr>
@@ -2389,11 +2389,11 @@ function BulkAddEquipmentDialog({
         </div>
 
         {/* Quick Tips */}
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
             Quick Tips:
           </h4>
-          <ul className="text-xs text-blue-800 space-y-1">
+          <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
             <li>• Use Tab key to navigate between cells quickly</li>
             <li>
               • Required fields (*) must be filled for successful submission

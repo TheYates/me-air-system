@@ -49,6 +49,7 @@ import {
   Mail,
   Calendar,
   Building,
+  Building2,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -351,23 +352,27 @@ export default function DepartmentDetailPage({
     allEquipment.some((eq: any) => eq.id === m.equipmentId)
   );
 
-  // Get sub-units from department data
+  // Generate sub-units from actual equipment data
+  const subUnits = React.useMemo(() => {
+    // Get unique sub-units from equipment
+    const uniqueSubUnits = new Set<string>();
+    allEquipment.forEach((eq: any) => {
+      if (eq.sub_unit) {
+        uniqueSubUnits.add(eq.sub_unit);
+      }
+    });
+
+    // Create sub-unit objects with equipment counts
+    return Array.from(uniqueSubUnits).map((subUnitName, index) => ({
+      id: index + 1,
+      name: subUnitName,
+      description: "",
+      equipmentCount: allEquipment.filter((eq: any) => eq.sub_unit === subUnitName).length,
+    }));
+  }, [allEquipment]);
+
+  // Get sub-units from department data (if needed for future use)
   const subUnitsFromDept = department?.sub_units || [];
-
-  // Create sub-unit objects with equipment counts
-  const subUnits = subUnitsFromDept.map((name: string) => {
-    const equipmentCount = allEquipment.filter(
-      (eq: any) => eq.subUnit === name
-    ).length;
-    return {
-      id: name,
-      name,
-      equipmentCount,
-      status: equipmentCount > 0 ? "Operational" : "Inactive",
-    };
-  });
-
-  const [isSubUnitsModified, setIsSubUnitsModified] = useState(false);
 
   // Handle sorting
   const handleSort = (field: string) => {
@@ -687,15 +692,15 @@ export default function DepartmentDetailPage({
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "equipment":
-        return <Package className="h-4 w-4 text-blue-500" />;
+        return <Package className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       case "maintenance":
-        return <Wrench className="h-4 w-4 text-yellow-500" />;
+        return <Wrench className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
       case "staff":
-        return <Users className="h-4 w-4 text-green-500" />;
+        return <Users className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case "budget":
-        return <DollarSign className="h-4 w-4 text-purple-500" />;
+        return <DollarSign className="h-4 w-4 text-purple-500 dark:text-purple-400" />;
       default:
-        return <Calendar className="h-4 w-4 text-gray-500" />;
+        return <Calendar className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -705,10 +710,10 @@ export default function DepartmentDetailPage({
 
   if (!department) {
     return (
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-background">
         <Navigation />
         <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold">Department Not Found</h1>
+          <h1 className="text-2xl font-bold text-foreground">Department Not Found</h1>
           <Link href="/departments">
             <Button className="mt-4">Back to Departments</Button>
           </Link>
@@ -718,42 +723,32 @@ export default function DepartmentDetailPage({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       <Navigation />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
               <Link href="/departments">
                 <Button variant="outline" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Departments
                 </Button>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {department.name}
-                </h1>
-                <p className="text-gray-600">
-                  DEPT-{department.id.toString().padStart(3, "0")} • Managed by{" "}
-                  {department.manager || "N/A"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Dialog
-                open={isEditDialogOpen}
-                onOpenChange={setIsEditDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Department
-                  </Button>
-                </DialogTrigger>
+              <div className="flex items-center space-x-2">
+                <Dialog
+                  open={isEditDialogOpen}
+                  onOpenChange={setIsEditDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Department
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>
@@ -798,6 +793,18 @@ export default function DepartmentDetailPage({
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
+            </div>
+            
+            {/* Department Title Section */}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {department.name}
+              </h1>
+              <p className="text-muted-foreground">
+                DEPT-{department.id.toString().padStart(3, "0")} • Managed by{" "}
+                {department.manager || "N/A"}
+              </p>
             </div>
           </div>
 
@@ -807,13 +814,13 @@ export default function DepartmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Total Equipment
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       {department.equipment_count || allEquipment.length}
                     </p>
-                    <p className="text-xs text-gray-500">In this department</p>
+                    <p className="text-xs text-muted-foreground">In this department</p>
                   </div>
                   <Package className="h-8 w-8 text-blue-500" />
                 </div>
@@ -823,10 +830,10 @@ export default function DepartmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Active Maintenance
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       {department.active_maintenance_count ||
                         departmentMaintenance.filter(
                           (m: any) =>
@@ -834,7 +841,7 @@ export default function DepartmentDetailPage({
                             m.status === "in-progress"
                         ).length}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Scheduled & In Progress
                     </p>
                   </div>
@@ -846,10 +853,10 @@ export default function DepartmentDetailPage({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Equipment Value
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground">
                       GHS{" "}
                       {(
                         department.total_value ||
@@ -860,7 +867,7 @@ export default function DepartmentDetailPage({
                         )
                       ).toLocaleString()}
                     </p>
-                    <p className="text-xs text-gray-500">Total asset value</p>
+                    <p className="text-xs text-muted-foreground">Total asset value</p>
                   </div>
                   <DollarSign className="h-8 w-8 text-green-500" />
                 </div>
@@ -894,47 +901,47 @@ export default function DepartmentDetailPage({
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Department ID
                         </p>
-                        <p className="font-medium">
+                        <p className="font-medium text-foreground">
                           DEPT-{department.id.toString().padStart(3, "0")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Manager
                         </p>
-                        <p className="font-medium">
+                        <p className="font-medium text-foreground">
                           {department.manager || "N/A"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Sub-Units
                         </p>
-                        <p className="font-medium">{subUnits.length}</p>
+                        <p className="font-medium text-foreground">{subUnits.length}</p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Equipment
                         </p>
-                        <p className="font-medium">
+                        <p className="font-medium text-foreground">
                           {allEquipment.length} items
                         </p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600 mb-2">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">
                         Contact Information
                       </p>
                       <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Mail className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center space-x-2 text-sm text-foreground">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
                           <span>{department.email || "N/A"}</span>
                         </div>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Phone className="h-4 w-4 text-gray-500" />
+                        <div className="flex items-center space-x-2 text-sm text-foreground">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
                           <span>{department.phone || "N/A"}</span>
                         </div>
                       </div>
@@ -952,18 +959,18 @@ export default function DepartmentDetailPage({
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Total Equipment
                         </p>
-                        <p className="text-lg font-bold text-blue-600">
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                           {allEquipment.length}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                           Total Value
                         </p>
-                        <p className="text-lg font-bold text-green-600">
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
                           GHS{" "}
                           {allEquipment
                             .reduce(
@@ -976,7 +983,7 @@ export default function DepartmentDetailPage({
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-600">
+                      <p className="text-sm font-medium text-muted-foreground">
                         Equipment by Sub-Unit
                       </p>
                       {subUnits.length > 0 ? (
@@ -985,19 +992,19 @@ export default function DepartmentDetailPage({
                             key={subUnit.id}
                             className="flex justify-between text-sm"
                           >
-                            <span className="text-gray-600 truncate">
+                            <span className="text-muted-foreground truncate">
                               {subUnit.name}
                             </span>
-                            <span className="font-medium ml-2">
+                            <span className="font-medium text-foreground ml-2">
                               {subUnit.equipmentCount} items
                             </span>
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-gray-500">No sub-units</p>
+                        <p className="text-sm text-muted-foreground">No sub-units</p>
                       )}
                       {subUnits.length > 4 && (
-                        <p className="text-xs text-gray-500 pt-1">
+                        <p className="text-xs text-muted-foreground pt-1">
                           +{subUnits.length - 4} more sub-units
                         </p>
                       )}
@@ -1011,237 +1018,180 @@ export default function DepartmentDetailPage({
                   <CardTitle>Description</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700">
+                  <p className="text-foreground">
                     {department.description || "No description available."}
                   </p>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="subunits" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Sub-units Overview</h3>
-                <Button
-                  size="sm"
-                  onClick={() => setIsAddSubUnitDialogOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Sub-unit
-                </Button>
+            <TabsContent value="subunits" className="space-y-6">
+              {/* Header with Stats */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground">Sub-units Management</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage organizational units within {department.name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-muted-foreground">{subUnits.length} Units</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Package className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {subUnits.reduce((sum, unit) => sum + unit.equipmentCount, 0)} Equipment
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsAddSubUnitDialogOpen(true)}
+                    className="shadow-sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Sub-unit
+                  </Button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {subUnits.map((subUnit) => (
-                  <Card key={subUnit.id} className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium">{subUnit.name}</h4>
-                      <Badge
-                        className={getStatusColor(subUnit.status)}
-                        variant="secondary"
-                      >
-                        {subUnit.status}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2 mb-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Equipment</span>
-                        <span className="font-medium">
-                          {subUnit.equipmentCount} items
-                        </span>
+              {/* Quick Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Units</p>
+                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{subUnits.length}</p>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Sub-unit ID</span>
-                        <span className="font-medium text-gray-500">
-                          {subUnit.id}
-                        </span>
+                      <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-green-700 dark:text-green-300 font-medium">Equipment</p>
+                        <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                          {subUnits.reduce((sum, unit) => sum + unit.equipmentCount, 0)}
+                        </p>
                       </div>
+                      <Package className="h-8 w-8 text-green-600 dark:text-green-400" />
                     </div>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs bg-transparent"
-                        onClick={() => {
-                          setSelectedSubUnit(subUnit);
-                          setIsViewSubUnitDialogOpen(true);
-                        }}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          setSelectedSubUnit(subUnit);
-                          setIsEditSubUnitDialogOpen(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteSubUnit(subUnit.id)}
-                        className="text-red-600 hover:text-red-800 text-xs"
-                      >
-                        Delete
-                      </Button>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">Active Units</p>
+                        <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
+                          {subUnits.filter(unit => unit.equipmentCount > 0).length}
+                        </p>
+                      </div>
+                      <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                     </div>
-                  </Card>
-                ))}
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Add Sub-unit Dialog */}
-              <Dialog
-                open={isAddSubUnitDialogOpen}
-                onOpenChange={setIsAddSubUnitDialogOpen}
-              >
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Add New Sub-unit</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="subUnitName">Sub-unit Name</Label>
-                      <Input
-                        id="subUnitName"
-                        placeholder="Enter sub-unit name"
-                      />
-                    </div>
+              {/* Sub-units Table */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" /> 
+                      Sub-units Directory
+                    </CardTitle>
+                    <Badge variant="outline" className="text-xs">
+                      {subUnits.length} units
+                    </Badge>
                   </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsAddSubUnitDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        const name = (
-                          document.getElementById(
-                            "subUnitName"
-                          ) as HTMLInputElement
-                        )?.value;
-                        if (name) {
-                          handleAddSubUnit({ name });
-                        }
-                      }}
-                    >
-                      Add Sub-unit
-                    </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b border-border hover:bg-transparent">
+                          <TableHead className="w-[250px] pl-6">Sub-unit</TableHead>
+                          <TableHead className="text-center">Equipment</TableHead>
+                          <TableHead className="text-center w-[100px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {subUnits.map((subUnit) => (
+                          <TableRow key={subUnit.id} className="hover:bg-muted/50 border-b border-border/50">
+                            <TableCell className="pl-6">
+                              <div>
+                                <div className="font-medium text-foreground">{subUnit.name}</div>
+                                <div className="text-sm text-muted-foreground mt-0.5">
+                                  {subUnit.description}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <Package className="h-3 w-3 text-muted-foreground" />
+                                <span className="font-medium">{subUnit.equipmentCount}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setSelectedSubUnit(subUnit);
+                                    setIsViewSubUnitDialogOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setSelectedSubUnit(subUnit);
+                                    setIsEditSubUnitDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                </DialogContent>
-              </Dialog>
+                </CardContent>
+              </Card>
 
-              {/* Edit Sub-unit Dialog */}
-              <Dialog
-                open={isEditSubUnitDialogOpen}
-                onOpenChange={setIsEditSubUnitDialogOpen}
-              >
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Edit Sub-unit - {selectedSubUnit?.name}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="editSubUnitName">Sub-unit Name</Label>
-                      <Input
-                        id="editSubUnitName"
-                        defaultValue={selectedSubUnit?.name}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditSubUnitDialogOpen(false)}
-                    >
-                      Cancel
+              {/* Empty State */}
+              {subUnits.length === 0 && (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Building2 className="h-12 w-12 text-muted-foreground mb-4" />    
+                    <h3 className="text-lg font-medium text-foreground mb-2">No Sub-units Yet</h3>
+                    <p className="text-muted-foreground text-center mb-6 max-w-md">
+                      Start organizing your department by creating sub-units. This helps manage 
+                      equipment and staff more effectively.
+                    </p>
+                    <Button onClick={() => setIsAddSubUnitDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Sub-unit
                     </Button>
-                    <Button
-                      onClick={() => {
-                        const name = (
-                          document.getElementById(
-                            "editSubUnitName"
-                          ) as HTMLInputElement
-                        )?.value;
-                        if (name) {
-                          handleEditSubUnit({ name });
-                        }
-                      }}
-                    >
-                      Save Changes
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              {/* View Sub-unit Details Dialog */}
-              <Dialog
-                open={isViewSubUnitDialogOpen}
-                onOpenChange={setIsViewSubUnitDialogOpen}
-              >
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Sub-unit Details - {selectedSubUnit?.name}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Sub-unit ID
-                        </p>
-                        <p className="font-medium">{selectedSubUnit?.id}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Status
-                        </p>
-                        <Badge
-                          className={getStatusColor(selectedSubUnit?.status)}
-                        >
-                          {selectedSubUnit?.status}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Equipment Count
-                        </p>
-                        <p className="font-medium">
-                          {selectedSubUnit?.equipmentCount} items
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Name
-                        </p>
-                        <p className="font-medium">{selectedSubUnit?.name}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-600">
-                        Description
-                      </p>
-                      <p className="text-gray-700">
-                        This sub-unit contains {selectedSubUnit?.equipmentCount}{" "}
-                        equipment items and is currently{" "}
-                        {selectedSubUnit?.status?.toLowerCase()}.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button onClick={() => setIsViewSubUnitDialogOpen(false)}>
-                      Close
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="equipment" className="space-y-6">
@@ -1289,7 +1239,7 @@ export default function DepartmentDetailPage({
                         <TableRow>
                           <TableHead className="w-16">#</TableHead>
                           <TableHead 
-                            className="cursor-pointer hover:bg-gray-100 select-none"
+                            className="cursor-pointer hover:bg-muted select-none"
                             onClick={() => handleSort("name")}
                           >
                             <div className="flex items-center space-x-2">
@@ -1725,6 +1675,133 @@ export default function DepartmentDetailPage({
           </Tabs>
         </div>
       </div>
+
+      {/* Add Sub-unit Dialog */}
+      <Dialog
+        open={isAddSubUnitDialogOpen}
+        onOpenChange={setIsAddSubUnitDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Sub-unit</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="subunit-name">Name</Label>
+              <Input id="subunit-name" placeholder="Enter sub-unit name" />
+            </div>
+            <div>
+              <Label htmlFor="subunit-description">Description</Label>
+              <Textarea id="subunit-description" placeholder="Enter description" />
+            </div>
+            <div>
+              <Label htmlFor="subunit-manager">Manager</Label>
+              <Input id="subunit-manager" placeholder="Enter manager name" />
+            </div>
+            <div>
+              <Label htmlFor="subunit-location">Location</Label>
+              <Input id="subunit-location" placeholder="Enter location" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIsAddSubUnitDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setIsAddSubUnitDialogOpen(false)}>
+              Create Sub-unit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Sub-unit Dialog */}
+      <Dialog
+        open={isViewSubUnitDialogOpen}
+        onOpenChange={setIsViewSubUnitDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedSubUnit?.name} Details</DialogTitle>
+          </DialogHeader>
+          {selectedSubUnit && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-foreground">Description</h4>
+                <p className="text-muted-foreground">{selectedSubUnit.description}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Manager</h4>
+                <p className="text-muted-foreground">{selectedSubUnit.manager}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Location</h4>
+                <p className="text-muted-foreground">{selectedSubUnit.location}</p>
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Equipment Count</h4>
+                <p className="text-muted-foreground">{selectedSubUnit.equipmentCount} items</p>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIsViewSubUnitDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Sub-unit Dialog */}
+      <Dialog
+        open={isEditSubUnitDialogOpen}
+        onOpenChange={setIsEditSubUnitDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {selectedSubUnit?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedSubUnit && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-subunit-name">Name</Label>
+                <Input
+                  id="edit-subunit-name"
+                  defaultValue={selectedSubUnit.name}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-subunit-description">Description</Label>
+                <Textarea
+                  id="edit-subunit-description"
+                  defaultValue={selectedSubUnit.description}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-subunit-manager">Manager</Label>
+                <Input
+                  id="edit-subunit-manager"
+                  defaultValue={selectedSubUnit.manager}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-subunit-location">Location</Label>
+                <Input
+                  id="edit-subunit-location"
+                  defaultValue={selectedSubUnit.location}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="outline" onClick={() => setIsEditSubUnitDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setIsEditSubUnitDialogOpen(false)}>
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -373,7 +373,7 @@ export default function Dashboard() {
                     stats.upcomingMaintenance.slice(0, 5).map((item, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
                       >
                         <div className="flex-1">
                           <div className="font-medium">

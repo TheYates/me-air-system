@@ -381,7 +381,7 @@ export default function EquipmentDetailPage({
                         ? `GHS ${Number(
                             equipment.purchase_cost
                           ).toLocaleString()}`
-                        : "Not Set"}
+                        : <span className="text-gray-400 italic">Not Set</span> }
                     </p>
                     <p className="text-xs text-gray-500">
                       {equipment.purchase_type
