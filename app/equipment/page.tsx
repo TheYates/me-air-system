@@ -41,7 +41,7 @@ import {
   Trash2,
   Printer,
 } from "lucide-react";
-import { Navigation } from "@/components/navigation";
+
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -398,10 +398,10 @@ export default function EquipmentPage() {
     const buildRow = (equipment: Equipment) => {
       const cells = [];
       if (printColumns.name) cells.push(equipment.name);
-      if (printColumns.tagNumber) cells.push(equipment.tag_number || equipment.tagNumber || 'Not Set');
+      if (printColumns.tagNumber) cells.push(equipment.tag_number || 'Not Set');
       if (printColumns.manufacturer) cells.push(`${equipment.manufacturer} ${equipment.model || ''}`);
       if (printColumns.department) cells.push(equipment.department_name || 'Unassigned');
-      if (printColumns.subUnit) cells.push(equipment.sub_unit || equipment.subUnit || 'Not Specified');
+      if (printColumns.subUnit) cells.push(equipment.sub_unit || 'Not Specified');
       if (printColumns.status) cells.push(equipment.status ? equipment.status.charAt(0).toUpperCase() + equipment.status.slice(1) : 'Unknown');
       if (printColumns.lastMaintenance) cells.push(equipment.last_service_date ? new Date(equipment.last_service_date).toLocaleDateString() : 'Not Set');
       if (printColumns.dateAdded) cells.push(equipment.createdAt || equipment.created_at ? new Date(equipment.createdAt || equipment.created_at!).toLocaleDateString() : 'Not Available');
@@ -479,43 +479,39 @@ export default function EquipmentPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Navigation />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-3 md:p-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-3 md:p-6">
           {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl md:text-2xl font-bold text-foreground">
                 Equipment Management
               </h1>
             </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrintClick}
-                className="text-xs sm:text-sm"
+                className="text-xs flex-1 sm:flex-none"
               >
-                <Printer className="h-4 w-4 mr-2" />
+                <Printer className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Print</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs sm:text-sm"
+                className="text-xs flex-1 sm:flex-none"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Export</span>
               </Button>
               <Button
                 size="sm"
                 onClick={() => setIsAddDialogOpen(true)}
-                className="text-xs sm:text-sm"
+                className="text-xs flex-1 sm:flex-none"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Add Equipment</span>
                 <span className="sm:hidden">Add</span>
               </Button>
@@ -523,7 +519,7 @@ export default function EquipmentPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsBulkAddDialogOpen(true)}
-                className="text-xs sm:text-sm"
+                className="text-xs w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 <span className="hidden md:inline">Bulk Add (Excel Style)</span>
@@ -533,9 +529,9 @@ export default function EquipmentPage() {
           </div>
 
           {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col lg:flex-row gap-4">
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="pt-4 md:pt-6 px-4 md:px-6">
+              <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -612,13 +608,13 @@ export default function EquipmentPage() {
 
           {/* Equipment Table */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">
+            <CardHeader className="px-4 md:px-6">
+              <CardTitle className="text-base md:text-lg">
                 Equipment Inventory
               </CardTitle>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <div className="min-w-full overflow-x-auto">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <Table className="text-xs md:text-sm">
                   <TableHeader>
                     <TableRow>
@@ -865,13 +861,13 @@ export default function EquipmentPage() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-3 md:px-6 py-4 border-t">
-                    <div className="text-xs md:text-sm text-muted-foreground text-center md:text-left">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 md:px-6 py-3 md:py-4 border-t">
+                    <div className="text-xs text-muted-foreground text-center sm:text-left">
                       Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                       {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
                       {totalItems} items
                     </div>
-                    <div className="flex items-center space-x-1 md:space-x-2 flex-wrap justify-center">
+                    <div className="flex items-center space-x-1 flex-wrap justify-center">
                       <Button
                         variant="outline"
                         size="sm"
@@ -879,10 +875,11 @@ export default function EquipmentPage() {
                           setCurrentPage((prev) => Math.max(1, prev - 1))
                         }
                         disabled={currentPage === 1}
+                        className="text-xs"
                       >
                         Previous
                       </Button>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-1 px-1">
                         {Array.from(
                           { length: Math.min(5, totalPages) },
                           (_, i) => {
@@ -906,7 +903,7 @@ export default function EquipmentPage() {
                                 }
                                 size="sm"
                                 onClick={() => setCurrentPage(pageNum)}
-                                className="w-10"
+                                className="w-8 h-8 p-0 text-xs"
                               >
                                 {pageNum}
                               </Button>
@@ -923,6 +920,7 @@ export default function EquipmentPage() {
                           )
                         }
                         disabled={currentPage === totalPages}
+                        className="text-xs"
                       >
                         Next
                       </Button>
@@ -932,7 +930,6 @@ export default function EquipmentPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
 
       {/* Add Equipment Dialog */}
@@ -2415,10 +2412,7 @@ function BulkAddEquipmentDialog({
 
 function EquipmentSkeleton() {
   return (
-    <div className="flex h-screen bg-background">
-      <Navigation />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 space-y-4 overflow-auto">
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-10 w-32" />
@@ -2444,8 +2438,6 @@ function EquipmentSkeleton() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
     </div>
   );
 }

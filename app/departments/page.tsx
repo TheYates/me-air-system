@@ -41,7 +41,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
-import { Navigation } from "@/components/navigation";
+
 import Link from "next/link";
 import {
   Table,
@@ -331,12 +331,8 @@ export default function DepartmentsPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Navigation />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
@@ -436,12 +432,12 @@ export default function DepartmentsPage() {
                       {/* Manager Info */}
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2 text-sm">
-                          <Users className="h-3 w-3 text-gray-500" />
+                          <Users className="h-3 w-3 text-gray-500 dark:text-white" />
                           <span className="font-medium truncate">
                             {department.manager}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                        <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-300">
                           <Mail className="h-3 w-3" />
                           <span className="truncate">{department.email}</span>
                         </div>
@@ -456,7 +452,9 @@ export default function DepartmentsPage() {
                           <div className="text-base font-bold">
                             {department.equipment_count || 0}
                           </div>
-                          <div className="text-xs text-gray-600">Equipment</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">
+                            Equipment
+                          </div>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center mb-0.5">
@@ -465,7 +463,7 @@ export default function DepartmentsPage() {
                           <div className="text-base font-bold">
                             {department.maintenance_count || 0}
                           </div>
-                          <div className="text-xs text-gray-600">
+                          <div className="text-xs text-gray-600 dark:text-gray-300">
                             Maintenance
                           </div>
                         </div>
@@ -473,14 +471,16 @@ export default function DepartmentsPage() {
                           <div className="text-sm font-bold">
                             {formatCurrency(department.total_value)}
                           </div>
-                          <div className="text-xs text-gray-600">Value</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">
+                            Value
+                          </div>
                         </div>
                       </div>
 
                       {/* Sub-units */}
                       {sortedSubUnits.length > 0 && (
                         <div className="space-y-1 pt-2 border-t">
-                          <div className="text-xs text-gray-600 mb-1">
+                          <div className="text-xs text-gray-600 dark:text-gray-100 mb-1">
                             Sub-units ({sortedSubUnits.length})
                           </div>
                           <div className="space-y-0.5">
@@ -491,7 +491,7 @@ export default function DepartmentsPage() {
                               return (
                                 <div
                                   key={idx}
-                                  className="text-sm text-gray-700 cursor-pointer hover:text-blue-600 flex justify-between items-center"
+                                  className="text-sm text-gray-700 dark:text-gray-400 cursor-pointer hover:text-blue-600 flex justify-between items-center"
                                   onClick={() => {
                                     setSelectedDepartment(department);
                                     setIsSubUnitEquipmentDialogOpen(true);
@@ -708,7 +708,6 @@ export default function DepartmentsPage() {
               </CardContent>
             </Card>
           )}
-        </div>
       </div>
 
       {/* Edit Dialog */}
@@ -826,12 +825,10 @@ export default function DepartmentsPage() {
   );
 }
 
+
 function DepartmentsSkeleton() {
   return (
-    <div className="flex h-screen bg-background">
-      <Navigation />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 space-y-4 overflow-auto">
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-10 w-48" />
@@ -854,7 +851,6 @@ function DepartmentsSkeleton() {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+   
   );
 }

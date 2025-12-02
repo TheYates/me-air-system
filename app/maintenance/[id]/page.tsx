@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Navigation } from "@/components/navigation";
+
 import {
   ArrowLeft,
   Edit,
@@ -89,14 +89,11 @@ export default function MaintenanceDetailPage({
 
   if (!maintenance) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <Navigation />
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold">Maintenance Task Not Found</h1>
-          <Link href="/maintenance">
-            <Button className="mt-4">Back to Maintenance</Button>
-          </Link>
-        </div>
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold">Maintenance Task Not Found</h1>
+        <Link href="/maintenance">
+          <Button className="mt-4">Back to Maintenance</Button>
+        </Link>
       </div>
     );
   }
@@ -129,11 +126,8 @@ export default function MaintenanceDetailPage({
   const totalCost = maintenance.cost ? Number(maintenance.cost) : partsCost;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Navigation />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
@@ -579,7 +573,6 @@ export default function MaintenanceDetailPage({
               </div>
             </TabsContent>
           </Tabs>
-        </div>
       </div>
     </div>
   );
@@ -587,10 +580,8 @@ export default function MaintenanceDetailPage({
 
 function MaintenanceDetailSkeleton() {
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Navigation />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
               <Skeleton className="h-10 w-40" />

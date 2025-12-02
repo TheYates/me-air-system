@@ -1,11 +1,18 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { TrendingUp, Package, Wrench, Building2, Calendar, Settings } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  TrendingUp,
+  Package,
+  Wrench,
+  Building2,
+  Calendar,
+  Settings,
+} from "lucide-react";
 
 const navigationItems = [
   { href: "/", label: "Dashboard", icon: TrendingUp },
@@ -14,10 +21,10 @@ const navigationItems = [
   { href: "/departments", label: "Departments", icon: Building2 },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/reports", label: "Reports", icon: TrendingUp },
-]
+];
 
 export function Navigation() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <div className="flex h-screen bg-background">
@@ -39,17 +46,20 @@ export function Navigation() {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
           {navigationItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
 
             return (
               <Link key={item.href} href={item.href}>
-                <Button variant={isActive ? "default" : "ghost"} className="w-full justify-start">
+                <Button
+                  variant={isActive ? "default" : "ghost"}
+                  className="w-full justify-start"
+                >
                   <Icon className="h-4 w-4 mr-2" />
                   {item.label}
                 </Button>
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -71,5 +81,5 @@ export function Navigation() {
         </div>
       </aside>
     </div>
-  )
+  );
 }

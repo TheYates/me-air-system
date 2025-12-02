@@ -31,7 +31,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Navigation } from "@/components/navigation";
+
 import { use } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -367,7 +367,9 @@ export default function DepartmentDetailPage({
       id: index + 1,
       name: subUnitName,
       description: "",
-      equipmentCount: allEquipment.filter((eq: any) => eq.sub_unit === subUnitName).length,
+      equipmentCount: allEquipment.filter(
+        (eq: any) => eq.sub_unit === subUnitName
+      ).length,
     }));
   }, [allEquipment]);
 
@@ -423,7 +425,10 @@ export default function DepartmentDetailPage({
       } else if (sortField === "status") {
         aValue = (aValue || "").toString().toLowerCase();
         bValue = (bValue || "").toString().toLowerCase();
-      } else if (sortField === "last_service_date" || sortField === "created_at") {
+      } else if (
+        sortField === "last_service_date" ||
+        sortField === "created_at"
+      ) {
         aValue = aValue ? new Date(aValue).getTime() : 0;
         bValue = bValue ? new Date(bValue).getTime() : 0;
       } else if (sortField === "purchase_cost") {
@@ -694,11 +699,15 @@ export default function DepartmentDetailPage({
       case "equipment":
         return <Package className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       case "maintenance":
-        return <Wrench className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
+        return (
+          <Wrench className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
+        );
       case "staff":
         return <Users className="h-4 w-4 text-green-500 dark:text-green-400" />;
       case "budget":
-        return <DollarSign className="h-4 w-4 text-purple-500 dark:text-purple-400" />;
+        return (
+          <DollarSign className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+        );
       default:
         return <Calendar className="h-4 w-4 text-muted-foreground" />;
     }
@@ -710,25 +719,20 @@ export default function DepartmentDetailPage({
 
   if (!department) {
     return (
-      <div className="flex h-screen bg-background">
-        <Navigation />
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold text-foreground">Department Not Found</h1>
-          <Link href="/departments">
-            <Button className="mt-4">Back to Departments</Button>
-          </Link>
-        </div>
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold text-foreground">
+          Department Not Found
+        </h1>
+        <Link href="/departments">
+          <Button className="mt-4">Back to Departments</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Navigation />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-6">
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -749,53 +753,53 @@ export default function DepartmentDetailPage({
                       Edit Department
                     </Button>
                   </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Edit Department - {department.name}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Department Name</Label>
-                      <Input id="name" defaultValue={department.name} />
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>
+                        Edit Department - {department.name}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Department Name</Label>
+                        <Input id="name" defaultValue={department.name} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="manager">Manager</Label>
+                        <Input id="manager" defaultValue={department.manager} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" defaultValue={department.email} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input id="phone" defaultValue={department.phone} />
+                      </div>
+                      <div className="col-span-2 space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          defaultValue={department.description}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="manager">Manager</Label>
-                      <Input id="manager" defaultValue={department.manager} />
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button onClick={() => setIsEditDialogOpen(false)}>
+                        Save Changes
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" defaultValue={department.email} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" defaultValue={department.phone} />
-                    </div>
-                    <div className="col-span-2 space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        defaultValue={department.description}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={() => setIsEditDialogOpen(false)}>
-                      Save Changes
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
-            
+
             {/* Department Title Section */}
             <div>
               <h1 className="text-2xl font-bold text-foreground">
@@ -820,7 +824,9 @@ export default function DepartmentDetailPage({
                     <p className="text-2xl font-bold text-foreground">
                       {department.equipment_count || allEquipment.length}
                     </p>
-                    <p className="text-xs text-muted-foreground">In this department</p>
+                    <p className="text-xs text-muted-foreground">
+                      In this department
+                    </p>
                   </div>
                   <Package className="h-8 w-8 text-blue-500" />
                 </div>
@@ -867,7 +873,9 @@ export default function DepartmentDetailPage({
                         )
                       ).toLocaleString()}
                     </p>
-                    <p className="text-xs text-muted-foreground">Total asset value</p>
+                    <p className="text-xs text-muted-foreground">
+                      Total asset value
+                    </p>
                   </div>
                   <DollarSign className="h-8 w-8 text-green-500" />
                 </div>
@@ -920,7 +928,9 @@ export default function DepartmentDetailPage({
                         <p className="text-sm font-medium text-muted-foreground">
                           Sub-Units
                         </p>
-                        <p className="font-medium text-foreground">{subUnits.length}</p>
+                        <p className="font-medium text-foreground">
+                          {subUnits.length}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">
@@ -1001,7 +1011,9 @@ export default function DepartmentDetailPage({
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted-foreground">No sub-units</p>
+                        <p className="text-sm text-muted-foreground">
+                          No sub-units
+                        </p>
                       )}
                       {subUnits.length > 4 && (
                         <p className="text-xs text-muted-foreground pt-1">
@@ -1029,7 +1041,9 @@ export default function DepartmentDetailPage({
               {/* Header with Stats */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground">Sub-units Management</h3>
+                  <h3 className="text-xl font-semibold text-foreground">
+                    Sub-units Management
+                  </h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Manage organizational units within {department.name}
                   </p>
@@ -1038,12 +1052,18 @@ export default function DepartmentDetailPage({
                   <div className="hidden sm:flex items-center gap-4 text-sm">
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-muted-foreground">{subUnits.length} Units</span>
+                      <span className="text-muted-foreground">
+                        {subUnits.length} Units
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Package className="w-3 h-3 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        {subUnits.reduce((sum, unit) => sum + unit.equipmentCount, 0)} Equipment
+                        {subUnits.reduce(
+                          (sum, unit) => sum + unit.equipmentCount,
+                          0
+                        )}{" "}
+                        Equipment
                       </span>
                     </div>
                   </div>
@@ -1064,35 +1084,49 @@ export default function DepartmentDetailPage({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Total Units</p>
-                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{subUnits.length}</p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                          Total Units
+                        </p>
+                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+                          {subUnits.length}
+                        </p>
                       </div>
                       <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-700 dark:text-green-300 font-medium">Equipment</p>
+                        <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                          Equipment
+                        </p>
                         <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                          {subUnits.reduce((sum, unit) => sum + unit.equipmentCount, 0)}
+                          {subUnits.reduce(
+                            (sum, unit) => sum + unit.equipmentCount,
+                            0
+                          )}
                         </p>
                       </div>
                       <Package className="h-8 w-8 text-green-600 dark:text-green-400" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">Active Units</p>
+                        <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+                          Active Units
+                        </p>
                         <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
-                          {subUnits.filter(unit => unit.equipmentCount > 0).length}
+                          {
+                            subUnits.filter((unit) => unit.equipmentCount > 0)
+                              .length
+                          }
                         </p>
                       </div>
                       <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
@@ -1106,7 +1140,7 @@ export default function DepartmentDetailPage({
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" /> 
+                      <Building2 className="h-5 w-5" />
                       Sub-units Directory
                     </CardTitle>
                     <Badge variant="outline" className="text-xs">
@@ -1119,17 +1153,28 @@ export default function DepartmentDetailPage({
                     <Table>
                       <TableHeader>
                         <TableRow className="border-b border-border hover:bg-transparent">
-                          <TableHead className="w-[250px] pl-6">Sub-unit</TableHead>
-                          <TableHead className="text-center">Equipment</TableHead>
-                          <TableHead className="text-center w-[100px]">Actions</TableHead>
+                          <TableHead className="w-[250px] pl-6">
+                            Sub-unit
+                          </TableHead>
+                          <TableHead className="text-center">
+                            Equipment
+                          </TableHead>
+                          <TableHead className="text-center w-[100px]">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {subUnits.map((subUnit) => (
-                          <TableRow key={subUnit.id} className="hover:bg-muted/50 border-b border-border/50">
+                          <TableRow
+                            key={subUnit.id}
+                            className="hover:bg-muted/50 border-b border-border/50"
+                          >
                             <TableCell className="pl-6">
                               <div>
-                                <div className="font-medium text-foreground">{subUnit.name}</div>
+                                <div className="font-medium text-foreground">
+                                  {subUnit.name}
+                                </div>
                                 <div className="text-sm text-muted-foreground mt-0.5">
                                   {subUnit.description}
                                 </div>
@@ -1138,7 +1183,9 @@ export default function DepartmentDetailPage({
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-1">
                                 <Package className="h-3 w-3 text-muted-foreground" />
-                                <span className="font-medium">{subUnit.equipmentCount}</span>
+                                <span className="font-medium">
+                                  {subUnit.equipmentCount}
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1179,11 +1226,13 @@ export default function DepartmentDetailPage({
               {subUnits.length === 0 && (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Building2 className="h-12 w-12 text-muted-foreground mb-4" />    
-                    <h3 className="text-lg font-medium text-foreground mb-2">No Sub-units Yet</h3>
+                    <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">
+                      No Sub-units Yet
+                    </h3>
                     <p className="text-muted-foreground text-center mb-6 max-w-md">
-                      Start organizing your department by creating sub-units. This helps manage 
-                      equipment and staff more effectively.
+                      Start organizing your department by creating sub-units.
+                      This helps manage equipment and staff more effectively.
                     </p>
                     <Button onClick={() => setIsAddSubUnitDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
@@ -1238,7 +1287,7 @@ export default function DepartmentDetailPage({
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-16">#</TableHead>
-                          <TableHead 
+                          <TableHead
                             className="cursor-pointer hover:bg-muted select-none"
                             onClick={() => handleSort("name")}
                           >
@@ -1247,8 +1296,8 @@ export default function DepartmentDetailPage({
                               {getSortIcon("name")}
                             </div>
                           </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-gray-100 select-none"
+                          <TableHead
+                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
                             onClick={() => handleSort("subUnit")}
                           >
                             <div className="flex items-center space-x-2">
@@ -1256,8 +1305,8 @@ export default function DepartmentDetailPage({
                               {getSortIcon("subUnit")}
                             </div>
                           </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-gray-100 select-none"
+                          <TableHead
+                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
                             onClick={() => handleSort("status")}
                           >
                             <div className="flex items-center space-x-2">
@@ -1265,8 +1314,8 @@ export default function DepartmentDetailPage({
                               {getSortIcon("status")}
                             </div>
                           </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-gray-100 select-none"
+                          <TableHead
+                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
                             onClick={() => handleSort("last_service_date")}
                           >
                             <div className="flex items-center space-x-2">
@@ -1274,8 +1323,8 @@ export default function DepartmentDetailPage({
                               {getSortIcon("last_service_date")}
                             </div>
                           </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-gray-100 select-none"
+                          <TableHead
+                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
                             onClick={() => handleSort("created_at")}
                           >
                             <div className="flex items-center space-x-2">
@@ -1283,8 +1332,8 @@ export default function DepartmentDetailPage({
                               {getSortIcon("created_at")}
                             </div>
                           </TableHead>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-gray-100 select-none"
+                          <TableHead
+                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
                             onClick={() => handleSort("purchase_cost")}
                           >
                             <div className="flex items-center space-x-2">
@@ -1301,7 +1350,7 @@ export default function DepartmentDetailPage({
                             (equipment: any, index: number) => (
                               <TableRow
                                 key={equipment.id}
-                                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                                className="cursor-pointer hover:bg-gray-50 dark:hover:bg-accent transition-colors"
                                 onClick={() =>
                                   (window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`)
                                 }
@@ -1314,7 +1363,7 @@ export default function DepartmentDetailPage({
                                     <div className="font-medium">
                                       {equipment.name}
                                     </div>
-                                    <div className="text-sm text-gray-600">
+                                    <div className="text-sm text-gray-600 dark:text-gray-400">
                                       {equipment.manufacturer}{" "}
                                       {equipment.model || ""}
                                     </div>
@@ -1324,12 +1373,12 @@ export default function DepartmentDetailPage({
                                   <div>
                                     <div className="font-medium">
                                       {equipment.subUnit || (
-                                        <span className="text-gray-400 italic">
+                                        <span className="text-gray-400 dark:text-gray-400 italic">
                                           Not Specified
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-sm text-gray-600">
+                                    <div className="text-sm text-gray-600 dark:text-gray-400">
                                       Tag:{" "}
                                       {equipment.tagNumber ||
                                         equipment.tag_number ||
@@ -1361,14 +1410,16 @@ export default function DepartmentDetailPage({
                                       day: "numeric",
                                     })
                                   ) : (
-                                    <span className="text-gray-400 italic">
+                                    <span className="text-gray-400 dark:text-gray-400 italic">
                                       Not Set
                                     </span>
                                   )}
                                 </TableCell>
                                 <TableCell>
                                   {equipment.created_at ? (
-                                    new Date(equipment.created_at).toLocaleDateString("en-US", {
+                                    new Date(
+                                      equipment.created_at
+                                    ).toLocaleDateString("en-US", {
                                       year: "numeric",
                                       month: "short",
                                       day: "numeric",
@@ -1673,7 +1724,6 @@ export default function DepartmentDetailPage({
               </Card>
             </TabsContent>
           </Tabs>
-        </div>
       </div>
 
       {/* Add Sub-unit Dialog */}
@@ -1692,7 +1742,10 @@ export default function DepartmentDetailPage({
             </div>
             <div>
               <Label htmlFor="subunit-description">Description</Label>
-              <Textarea id="subunit-description" placeholder="Enter description" />
+              <Textarea
+                id="subunit-description"
+                placeholder="Enter description"
+              />
             </div>
             <div>
               <Label htmlFor="subunit-manager">Manager</Label>
@@ -1704,7 +1757,10 @@ export default function DepartmentDetailPage({
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => setIsAddSubUnitDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddSubUnitDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={() => setIsAddSubUnitDialogOpen(false)}>
@@ -1727,24 +1783,35 @@ export default function DepartmentDetailPage({
             <div className="space-y-4">
               <div>
                 <h4 className="font-medium text-foreground">Description</h4>
-                <p className="text-muted-foreground">{selectedSubUnit.description}</p>
+                <p className="text-muted-foreground">
+                  {selectedSubUnit.description}
+                </p>
               </div>
               <div>
                 <h4 className="font-medium text-foreground">Manager</h4>
-                <p className="text-muted-foreground">{selectedSubUnit.manager}</p>
+                <p className="text-muted-foreground">
+                  {selectedSubUnit.manager}
+                </p>
               </div>
               <div>
                 <h4 className="font-medium text-foreground">Location</h4>
-                <p className="text-muted-foreground">{selectedSubUnit.location}</p>
+                <p className="text-muted-foreground">
+                  {selectedSubUnit.location}
+                </p>
               </div>
               <div>
                 <h4 className="font-medium text-foreground">Equipment Count</h4>
-                <p className="text-muted-foreground">{selectedSubUnit.equipmentCount} items</p>
+                <p className="text-muted-foreground">
+                  {selectedSubUnit.equipmentCount} items
+                </p>
               </div>
             </div>
           )}
           <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => setIsViewSubUnitDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsViewSubUnitDialogOpen(false)}
+            >
               Close
             </Button>
           </div>
@@ -1793,7 +1860,10 @@ export default function DepartmentDetailPage({
             </div>
           )}
           <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" onClick={() => setIsEditSubUnitDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditSubUnitDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={() => setIsEditSubUnitDialogOpen(false)}>
@@ -1808,10 +1878,8 @@ export default function DepartmentDetailPage({
 
 function DepartmentDetailSkeleton() {
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Navigation />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-10 w-96" />
             <Skeleton className="h-10 w-32" />
@@ -1833,7 +1901,6 @@ function DepartmentDetailSkeleton() {
               <Skeleton className="h-96 w-full" />
             </CardContent>
           </Card>
-        </div>
       </div>
     </div>
   );

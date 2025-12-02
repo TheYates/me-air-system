@@ -52,7 +52,7 @@ export function BarChartComponent({
   const options: ChartOptions<"bar"> = {
     indexAxis: "x" as const,
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "bottom" as const,
@@ -67,6 +67,22 @@ export function BarChartComponent({
     scales: {
       x: {
         stacked: stacked,
+        ticks: {
+          autoSkip: false,
+          maxRotation: 45,
+          minRotation: 45,
+          font: {
+            size: 11,
+          },
+          callback: function(value, index) {
+            const label = labels[index];
+            // Truncate labels longer than 15 characters on mobile
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+              return label.length > 12 ? label.substring(0, 12) + '...' : label;
+            }
+            return label;
+          },
+        },
       },
       y: {
         stacked: stacked,

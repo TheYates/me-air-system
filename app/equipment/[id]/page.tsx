@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Navigation } from "@/components/navigation";
+
 import {
   ArrowLeft,
   Edit,
@@ -79,16 +79,16 @@ export default function EquipmentDetailPage({
   const equipmentId = parseInt(id);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   // Get URL parameters for return navigation
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const [returnTab, setReturnTab] = useState<string | null>(null);
-  
+
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      setReturnTo(searchParams.get('returnTo'));
-      setReturnTab(searchParams.get('returnTab'));
+      setReturnTo(searchParams.get("returnTo"));
+      setReturnTab(searchParams.get("returnTab"));
     }
   }, []);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -132,10 +132,10 @@ export default function EquipmentDetailPage({
   useEffect(() => {
     if (fetchedSpecifications.length > 0) {
       setSpecifications(fetchedSpecifications);
-    } else {
+    } else if (fetchedSpecifications.length === 0 && specifications.length === 0) {
       setSpecifications([{ specificationKey: "", specificationValue: "" }]);
     }
-  }, [fetchedSpecifications]);
+  }, [fetchedSpecifications.length]);
 
   // Handle status update
   const handleStatusUpdate = async (newStatus: string) => {
@@ -225,14 +225,11 @@ export default function EquipmentDetailPage({
 
   if (!equipment) {
     return (
-      <div className="flex h-screen bg-background">
-        <Navigation />
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold">Equipment Not Found</h1>
-          <Link href="/equipment">
-            <Button className="mt-4">Back</Button>
-          </Link>
-        </div>
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold">Equipment Not Found</h1>
+        <Link href="/equipment">
+          <Button className="mt-4">Back</Button>
+        </Link>
       </div>
     );
   }
@@ -259,989 +256,997 @@ export default function EquipmentDetailPage({
   );
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-background">
-      <Navigation />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  if (returnTo && returnTab) {
-                    // Navigate back to department with specific tab
-                    window.location.href = `${returnTo}?tab=${returnTab}`;
-                  } else {
-                    // Default navigation to equipment list
-                    window.location.href = "/equipment";
-                  }
-                }}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-3 md:p-6">
+        {/* Header */}
+        <div className="mb-4 md:mb-6">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (returnTo && returnTab) {
+                  // Navigate back to department with specific tab
+                  window.location.href = `${returnTo}?tab=${returnTab}`;
+                } else {
+                  // Default navigation to equipment list
+                  window.location.href = "/equipment";
+                }
+              }}
+              className="text-xs md:text-sm"
+            >
+              <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">
                 Back {returnTo ? "to Department" : "to Equipment"}
+              </span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs md:text-sm"
+              >
+                <Download className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <span className="hidden md:inline">Export</span>
               </Button>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditDialogOpen(true)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditDialogOpen(true)}
+                className="text-xs md:text-sm"
+              >
+                <Edit className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <span className="hidden md:inline">Edit</span>
+              </Button>
             </div>
-            <div className="flex items-start justify-between mt-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {equipment.name}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  EQ-{equipment.id.toString().padStart(3, "0")} •{" "}
-                  {equipment.tag_number} • {equipment.manufacturer}{" "}
-                  {equipment.model || ""}
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <DropdownMenu
-                  open={isStatusMenuOpen}
-                  onOpenChange={setIsStatusMenuOpen}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <Badge
-                      className={`${getStatusColor(
-                        equipment.status || "unknown"
-                      )} cursor-pointer hover:opacity-80`}
-                    >
-                      {equipment.status
-                        ? equipment.status.charAt(0).toUpperCase() +
-                          equipment.status.slice(1)
-                        : "Unknown"}
-                    </Badge>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {["operational", "maintenance", "broken", "retired"].map(
-                      (status) => {
-                        const isCurrentStatus = equipment.status === status;
-                        const getTextColor = (s: string) => {
-                          switch (s.toLowerCase()) {
-                            case "operational":
-                              return "text-green-600";
-                            case "maintenance":
-                              return "text-yellow-600";
-                            case "broken":
-                              return "text-red-600";
-                            case "retired":
-                              return "text-gray-600";
-                            default:
-                              return "text-gray-600";
-                          }
-                        };
-                        return (
-                          <DropdownMenuItem
-                            key={status}
-                            onClick={() => handleStatusUpdate(status)}
-                            className={`flex items-center justify-between cursor-pointer ${
-                              isCurrentStatus ? "bg-gray-100" : ""
-                            }`}
-                          >
-                            <span className={getTextColor(status)}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                              {isCurrentStatus && " ✓"}
-                            </span>
-                          </DropdownMenuItem>
-                        );
-                      }
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between mt-3 md:mt-4 gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                {equipment.name}
+              </h1>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 truncate">
+                EQ-{equipment.id.toString().padStart(3, "0")} •{" "}
+                {equipment.tag_number} • {equipment.manufacturer}{" "}
+                {equipment.model || ""}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <DropdownMenu
+                open={isStatusMenuOpen}
+                onOpenChange={setIsStatusMenuOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Badge
+                    className={`${getStatusColor(
+                      equipment.status || "unknown"
+                    )} cursor-pointer hover:opacity-80`}
+                  >
+                    {equipment.status
+                      ? equipment.status.charAt(0).toUpperCase() +
+                        equipment.status.slice(1)
+                      : "Unknown"}
+                  </Badge>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {["operational", "maintenance", "broken", "retired"].map(
+                    (status) => {
+                      const isCurrentStatus = equipment.status === status;
+                      const getTextColor = (s: string) => {
+                        switch (s.toLowerCase()) {
+                          case "operational":
+                            return "text-green-600";
+                          case "maintenance":
+                            return "text-yellow-600";
+                          case "broken":
+                            return "text-red-600";
+                          case "retired":
+                            return "text-gray-600";
+                          default:
+                            return "text-gray-600";
+                        }
+                      };
+                      return (
+                        <DropdownMenuItem
+                          key={status}
+                          onClick={() => handleStatusUpdate(status)}
+                          className={`flex items-center justify-between cursor-pointer ${
+                            isCurrentStatus ? "bg-gray-100" : ""
+                          }`}
+                        >
+                          <span className={getTextColor(status)}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {isCurrentStatus && " ✓"}
+                          </span>
+                        </DropdownMenuItem>
+                      );
+                    }
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Info Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+          <Card>
+            <CardContent className="pt-4 md:pt-6 px-4 md:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Purchase Value
+                  </p>
+                  <p className="text-lg md:text-2xl font-bold">
+                    {equipment.purchase_cost ? (
+                      `GHS ${Number(equipment.purchase_cost).toLocaleString()}`
+                    ) : (
+                      <span className="text-gray-400 italic">Not Set</span>
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {equipment.purchase_type
+                      ? equipment.purchase_type.charAt(0).toUpperCase() +
+                        equipment.purchase_type.slice(1)
+                      : "Unknown"}
+                  </p>
+                </div>
+                <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-green-500" />
               </div>
-            </div>
-          </div>
-
-          {/* Quick Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Purchase Value
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {equipment.purchase_cost
-                        ? `GHS ${Number(
-                            equipment.purchase_cost
-                          ).toLocaleString()}`
-                        : <span className="text-gray-400 italic">Not Set</span> }
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {equipment.purchase_type
-                        ? equipment.purchase_type.charAt(0).toUpperCase() +
-                          equipment.purchase_type.slice(1)
-                        : "Unknown"}
-                    </p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-green-500" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 md:pt-6 px-4 md:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Warranty Status
+                  </p>
+                  <p className="text-base md:text-lg font-bold text-green-600">
+                    {equipment.warranty_info ? (
+                      "Active"
+                    ) : (
+                      <span className="text-gray-400 italic">Not Set</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {equipment.warranty_info
+                      ? equipment.warranty_info.substring(0, 20) + "..."
+                      : "No warranty"}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Warranty Status
-                    </p>
-                    <p className="text-lg font-bold text-green-600">
-                      {equipment.warranty_info ? (
-                        "Active"
-                      ) : (
-                        <span className="text-gray-400 italic">Not Set</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {equipment.warranty_info
-                        ? equipment.warranty_info.substring(0, 20) + "..."
-                        : "No warranty"}
-                    </p>
-                  </div>
-                  <Shield className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Service Contract
-                    </p>
-                    <p className="text-lg font-bold text-blue-600">
-                      {equipment.has_service_contract ? "Yes" : "No"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {equipment.service_organization || (
-                        <span className="text-gray-400 italic">
-                          Not Specified
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <Users className="h-8 w-8 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Next Maintenance
-                    </p>
-                    <p className="text-lg font-bold">
-                      {upcomingMaintenance?.date
-                        ? new Date(
-                            upcomingMaintenance.date
-                          ).toLocaleDateString()
-                        : "Not scheduled"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {upcomingMaintenance?.type || (
-                        <span className="text-gray-400 italic">
-                          Not Specified
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <Calendar className="h-8 w-8 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content Tabs */}
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="specifications">Specifications</TabsTrigger>
-              <TabsTrigger value="service">Service</TabsTrigger>
-              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
-              <TabsTrigger value="photos">Photos</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FileText className="h-5 w-5" />
-                      <span>Basic Information</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Equipment ID
-                        </p>
-                        <p className="font-medium">
-                          EQ-{equipment.id.toString().padStart(3, "0")}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Tag Number
-                        </p>
-                        <p className="font-medium">
-                          {equipment.tag_number || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Serial Number
-                        </p>
-                        <p className="font-medium">
-                          {equipment.serial_number || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          MFG Number
-                        </p>
-                        <p className="font-medium">
-                          {equipment.mfg_number || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Manufacturer
-                        </p>
-                        <p className="font-medium">{equipment.manufacturer}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Model
-                        </p>
-                        <p className="font-medium">
-                          {equipment.model || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Year Manufactured
-                        </p>
-                        <p className="font-medium">
-                          {equipment.year_of_manufacture || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Country of Origin
-                        </p>
-                        <p className="font-medium">
-                          {equipment.country_of_origin || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <MapPin className="h-5 w-5" />
-                      <span>Location & Ownership</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Department
-                        </p>
-                        <p className="font-medium">
-                          {equipment.department_name || "Unassigned"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Sub-unit
-                        </p>
-                        <p className="font-medium">
-                          {equipment.sub_unit || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Owner
-                        </p>
-                        <p className="font-medium">
-                          {equipment.owner || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Maintained By
-                        </p>
-                        <p className="font-medium">
-                          {equipment.maintained_by || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <DollarSign className="h-5 w-5" />
-                      <span>Purchase Information</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Purchase Type
-                        </p>
-                        <p className="font-medium">
-                          {equipment.purchase_type ? (
-                            equipment.purchase_type.charAt(0).toUpperCase() +
-                            equipment.purchase_type.slice(1)
-                          ) : (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Purchase Date
-                        </p>
-                        <p className="font-medium">
-                          {equipment.purchase_date ? (
-                            new Date(
-                              equipment.purchase_date
-                            ).toLocaleDateString()
-                          ) : (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Installation Date
-                        </p>
-                        <p className="font-medium">
-                          {equipment.date_of_installation ? (
-                            new Date(
-                              equipment.date_of_installation
-                            ).toLocaleDateString()
-                          ) : (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Purchase Value
-                        </p>
-                        <p className="font-medium">
-                          {equipment.purchase_cost ? (
-                            `GHS ${Number(
-                              equipment.purchase_cost
-                            ).toLocaleString()}`
-                          ) : (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          PO Number
-                        </p>
-                        <p className="font-medium">
-                          {equipment.purchase_order_number || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Employee Number
-                        </p>
-                        <p className="font-medium">
-                          {equipment.employee_number || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Shield className="h-5 w-5" />
-                      <span>Warranty Information</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">
-                        Warranty Details
-                      </p>
-                      <p className="font-medium text-sm">
-                        {equipment.warranty_info ||
-                          "No warranty information available"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <Shield className="h-6 w-6 md:h-8 md:w-8 text-green-500" />
               </div>
-            </TabsContent>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 md:pt-6 px-4 md:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Service Contract
+                  </p>
+                  <p className="text-base md:text-lg font-bold text-blue-600">
+                    {equipment.has_service_contract ? "Yes" : "No"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {equipment.service_organization || (
+                      <span className="text-gray-400 italic">
+                        Not Specified
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <Users className="h-6 w-6 md:h-8 md:w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 md:pt-6 px-4 md:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Next Maintenance
+                  </p>
+                  <p className="text-base md:text-lg font-bold">
+                    {upcomingMaintenance?.date
+                      ? new Date(upcomingMaintenance.date).toLocaleDateString()
+                      : "Not scheduled"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {upcomingMaintenance?.type || (
+                      <span className="text-gray-400 italic">
+                        Not Specified
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <Calendar className="h-6 w-6 md:h-8 md:w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            <TabsContent value="specifications" className="space-y-6">
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+            <TabsTrigger value="overview" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden">Info</span>
+            </TabsTrigger>
+            <TabsTrigger value="specifications" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Specifications</span>
+              <span className="sm:hidden">Specs</span>
+            </TabsTrigger>
+            <TabsTrigger value="service" className="text-xs md:text-sm">
+              Service
+            </TabsTrigger>
+            <TabsTrigger value="maintenance" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Maintenance</span>
+              <span className="sm:hidden">Maint.</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="documents"
+              className="text-xs md:text-sm hidden lg:flex"
+            >
+              Documents
+            </TabsTrigger>
+            <TabsTrigger
+              value="photos"
+              className="text-xs md:text-sm hidden lg:flex"
+            >
+              Photos
+            </TabsTrigger>
+            <TabsTrigger
+              value="history"
+              className="text-xs md:text-sm hidden lg:flex"
+            >
+              History
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Technical Specifications</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditSpecsDialogOpen(true)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Specifications
-                    </Button>
+                <CardHeader className="px-4 md:px-6">
+                  <CardTitle className="flex items-center space-x-2 text-base md:text-lg">
+                    <FileText className="h-4 w-4 md:h-5 md:w-5" />
+                    <span>Basic Information</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {specifications.length > 0 &&
-                  specifications.some(
-                    (spec) =>
-                      spec.specificationKey &&
-                      spec.specificationKey.trim() !== ""
-                  ) ? (
-                    <div className="space-y-4">
-                      {specifications.map((spec, index) => (
-                        <div key={index}>
-                          {spec.specificationKey && (
-                            <>
-                              <p className="text-sm font-medium text-gray-600">
-                                {spec.specificationKey}
-                              </p>
-                              <p className="font-medium text-sm">
-                                {spec.specificationValue || "Not Specified"}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-gray-600">
-                      <p>No technical specifications added yet.</p>
-                      <p className="text-sm mt-2">
-                        Click "Edit Specifications" to add specifications.
+                <CardContent className="space-y-3 px-4 md:px-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                    <div>
+                      <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Equipment ID
+                      </p>
+                      <p className="text-sm md:text-base font-medium">
+                        EQ-{equipment.id.toString().padStart(3, "0")}
                       </p>
                     </div>
-                  )}
+                    <div>
+                      <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Tag Number
+                      </p>
+                      <p className="text-sm md:text-base font-medium">
+                        {equipment.tag_number || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Serial Number
+                      </p>
+                      <p className="font-medium">
+                        {equipment.serial_number || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        MFG Number
+                      </p>
+                      <p className="font-medium">
+                        {equipment.mfg_number || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Manufacturer
+                      </p>
+                      <p className="font-medium">{equipment.manufacturer}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Model</p>
+                      <p className="font-medium">
+                        {equipment.model || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Year Manufactured
+                      </p>
+                      <p className="font-medium">
+                        {equipment.year_of_manufacture || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Country of Origin
+                      </p>
+                      <p className="font-medium">
+                        {equipment.country_of_origin || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            <TabsContent value="service" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Users className="h-5 w-5" />
-                    <span>Service Contract Details</span>
+                    <MapPin className="h-5 w-5" />
+                    <span>Location & Ownership</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Service Contract
-                        </p>
-                        <Badge
-                          className={
-                            equipment.has_service_contract
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }
-                        >
-                          {equipment.has_service_contract ? "Yes" : "No"}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Service Organization
-                        </p>
-                        <p className="font-medium">
-                          {equipment.service_organization || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          Contact Information
-                        </p>
-                        <p className="font-medium text-sm">
-                          {equipment.contact_info || (
-                            <span className="text-gray-400 italic">
-                              Not Specified
-                            </span>
-                          )}
-                        </p>
-                      </div>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Department
+                      </p>
+                      <p className="font-medium">
+                        {equipment.department_name || "Unassigned"}
+                      </p>
                     </div>
-
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-900">
-                        Service Coverage
-                      </h4>
-                      <div className="space-y-3">
-                        {equipment.service_types &&
-                        equipment.service_types.length > 0 ? (
-                          equipment.service_types.map((type, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                            >
-                              <span className="font-medium capitalize">
-                                {type}
-                              </span>
-                              <Badge className="bg-green-100 text-green-800">
-                                Yes
-                              </Badge>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-600">
-                            No service types specified
-                          </p>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Sub-unit
+                      </p>
+                      <p className="font-medium">
+                        {equipment.sub_unit || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
                         )}
-                      </div>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Owner</p>
+                      <p className="font-medium">
+                        {equipment.owner || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Maintained By
+                      </p>
+                      <p className="font-medium">
+                        {equipment.maintained_by || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="maintenance" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Maintenance History</h3>
-                <Button
-                  size="sm"
-                  onClick={() => setIsMaintenanceDialogOpen(true)}
-                >
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Log Maintenance
-                </Button>
-              </div>
-
-              {/* Maintenance Log Dialog */}
-              <MaintenanceLogDialog
-                open={isMaintenanceDialogOpen}
-                onOpenChange={setIsMaintenanceDialogOpen}
-                equipmentId={equipmentId}
-                equipmentName={equipment?.name}
-              />
-
-              {/* Upcoming Maintenance */}
-              {upcomingMaintenance && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                      <span>Upcoming Maintenance</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center p-4 bg-yellow-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">
-                          {upcomingMaintenance.type
-                            ? upcomingMaintenance.type.charAt(0).toUpperCase() +
-                              upcomingMaintenance.type.slice(1)
-                            : "Unknown"}{" "}
-                          Maintenance
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Scheduled for{" "}
-                          {new Date(
-                            upcomingMaintenance.date
-                          ).toLocaleDateString()}
-                          {upcomingMaintenance.technician &&
-                            ` • ${upcomingMaintenance.technician}`}
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Maintenance Timeline */}
-              <MaintenanceTimeline
-                records={maintenanceRecords}
-                isLoading={false}
-                isError={false}
-              />
-
-              {/* Old Table - Removed */}
-              {false && (
-                <TabsContent value="maintenance" className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Maintenance History</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {maintenanceRecords.length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Type</TableHead>
-                              <TableHead>Technician</TableHead>
-                              <TableHead>Cost</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {maintenanceRecords.map((record) => (
-                              <TableRow key={record.id}>
-                                <TableCell>
-                                  {record.date ? (
-                                    new Date(record.date).toLocaleDateString()
-                                  ) : (
-                                    <span className="text-gray-400 italic">
-                                      Not Specified
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {record.type ? (
-                                    record.type.charAt(0).toUpperCase() +
-                                    record.type.slice(1)
-                                  ) : (
-                                    <span className="text-gray-400 italic">
-                                      Not Specified
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {record.technician || "Not Assigned"}
-                                </TableCell>
-                                <TableCell>
-                                  {record.cost
-                                    ? `GHS ${Number(
-                                        record.cost
-                                      ).toLocaleString()}`
-                                    : "Not Set"}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    className={
-                                      record.status === "completed"
-                                        ? "bg-green-100 text-green-800"
-                                        : record.status === "in-progress"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : "bg-blue-100 text-blue-800"
-                                    }
-                                  >
-                                    {record.status
-                                      ? record.status.charAt(0).toUpperCase() +
-                                        record.status.slice(1)
-                                      : "Unknown"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="sm">
-                                    View
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <div className="text-center py-10 text-gray-600">
-                          <Wrench className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                          <p>No maintenance records found</p>
-                          <p className="text-sm mt-2">
-                            Schedule maintenance to start tracking service
-                            history
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
-            </TabsContent>
-            <TabsContent value="documents" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Documents</h3>
-                <Button
-                  size="sm"
-                  onClick={() => setIsUploadDocDialogOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Upload Document
-                </Button>
-              </div>
 
               <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-10 text-gray-600">
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>No documents available</p>
-                    <p className="text-sm mt-2">
-                      Upload documents like manuals, certificates, or contracts
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <DollarSign className="h-5 w-5" />
+                    <span>Purchase Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Purchase Type
+                      </p>
+                      <p className="font-medium">
+                        {equipment.purchase_type ? (
+                          equipment.purchase_type.charAt(0).toUpperCase() +
+                          equipment.purchase_type.slice(1)
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Purchase Date
+                      </p>
+                      <p className="font-medium">
+                        {equipment.purchase_date ? (
+                          new Date(equipment.purchase_date).toLocaleDateString()
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Installation Date
+                      </p>
+                      <p className="font-medium">
+                        {equipment.date_of_installation ? (
+                          new Date(
+                            equipment.date_of_installation
+                          ).toLocaleDateString()
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Purchase Value
+                      </p>
+                      <p className="font-medium">
+                        {equipment.purchase_cost ? (
+                          `GHS ${Number(
+                            equipment.purchase_cost
+                          ).toLocaleString()}`
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        PO Number
+                      </p>
+                      <p className="font-medium">
+                        {equipment.purchase_order_number || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Employee Number
+                      </p>
+                      <p className="font-medium">
+                        {equipment.employee_number || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Shield className="h-5 w-5" />
+                    <span>Warranty Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">
+                      Warranty Details
+                    </p>
+                    <p className="font-medium text-sm">
+                      {equipment.warranty_info ||
+                        "No warranty information available"}
                     </p>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="photos" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Photos</h3>
-                <Button
-                  size="sm"
-                  onClick={() => setIsUploadPhotoDialogOpen(true)}
-                >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Upload Photo
-                </Button>
-              </div>
+          <TabsContent value="specifications" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Technical Specifications</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditSpecsDialogOpen(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Specifications
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {specifications.length > 0 &&
+                specifications.some(
+                  (spec) =>
+                    spec.specificationKey && spec.specificationKey.trim() !== ""
+                ) ? (
+                  <div className="space-y-4">
+                    {specifications.map((spec, index) => (
+                      <div key={index}>
+                        {spec.specificationKey && (
+                          <>
+                            <p className="text-sm font-medium text-gray-600">
+                              {spec.specificationKey}
+                            </p>
+                            <p className="font-medium text-sm">
+                              {spec.specificationValue || "Not Specified"}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 text-gray-600">
+                    <p>No technical specifications added yet.</p>
+                    <p className="text-sm mt-2">
+                      Click "Edit Specifications" to add specifications.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <Card>
-                <CardContent className="pt-6">
-                  {equipment.photo_url ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="border rounded-lg p-4">
-                        <div className="w-full h-48 bg-gray-200 rounded mb-3 overflow-hidden">
-                          <img
-                            src={equipment.photo_url}
-                            alt={equipment.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <p className="font-medium">Equipment Photo</p>
+          <TabsContent value="service" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5" />
+                  <span>Service Contract Details</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Service Contract
+                      </p>
+                      <Badge
+                        className={
+                          equipment.has_service_contract
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }
+                      >
+                        {equipment.has_service_contract ? "Yes" : "No"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Service Organization
+                      </p>
+                      <p className="font-medium">
+                        {equipment.service_organization || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        Contact Information
+                      </p>
+                      <p className="font-medium text-sm">
+                        {equipment.contact_info || (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">
+                      Service Coverage
+                    </h4>
+                    <div className="space-y-3">
+                      {equipment.service_types &&
+                      equipment.service_types.length > 0 ? (
+                        equipment.service_types.map((type, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                          >
+                            <span className="font-medium capitalize">
+                              {type}
+                            </span>
+                            <Badge className="bg-green-100 text-green-800">
+                              Yes
+                            </Badge>
+                          </div>
+                        ))
+                      ) : (
                         <p className="text-sm text-gray-600">
-                          Uploaded{" "}
+                          No service types specified
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Maintenance History</h3>
+              <Button
+                size="sm"
+                onClick={() => setIsMaintenanceDialogOpen(true)}
+              >
+                <Wrench className="h-4 w-4 mr-2" />
+                Log Maintenance
+              </Button>
+            </div>
+
+            {/* Maintenance Log Dialog */}
+            <MaintenanceLogDialog
+              open={isMaintenanceDialogOpen}
+              onOpenChange={setIsMaintenanceDialogOpen}
+              equipmentId={equipmentId}
+              equipmentName={equipment?.name}
+            />
+
+            {/* Upcoming Maintenance */}
+            {upcomingMaintenance && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    <span>Upcoming Maintenance</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center p-4 bg-yellow-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">
+                        {upcomingMaintenance.type
+                          ? upcomingMaintenance.type.charAt(0).toUpperCase() +
+                            upcomingMaintenance.type.slice(1)
+                          : "Unknown"}{" "}
+                        Maintenance
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Scheduled for{" "}
+                        {new Date(
+                          upcomingMaintenance.date
+                        ).toLocaleDateString()}
+                        {upcomingMaintenance.technician &&
+                          ` • ${upcomingMaintenance.technician}`}
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Maintenance Timeline */}
+            <MaintenanceTimeline
+              records={maintenanceRecords}
+              isLoading={false}
+              isError={false}
+            />
+
+            {/* Old Table - Removed */}
+            {false && (
+              <TabsContent value="maintenance" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Maintenance History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {maintenanceRecords.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Technician</TableHead>
+                            <TableHead>Cost</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {maintenanceRecords.map((record) => (
+                            <TableRow key={record.id}>
+                              <TableCell>
+                                {record.date ? (
+                                  new Date(record.date).toLocaleDateString()
+                                ) : (
+                                  <span className="text-gray-400 italic">
+                                    Not Specified
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {record.type ? (
+                                  record.type.charAt(0).toUpperCase() +
+                                  record.type.slice(1)
+                                ) : (
+                                  <span className="text-gray-400 italic">
+                                    Not Specified
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {record.technician || "Not Assigned"}
+                              </TableCell>
+                              <TableCell>
+                                {record.cost
+                                  ? `GHS ${Number(
+                                      record.cost
+                                    ).toLocaleString()}`
+                                  : "Not Set"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={
+                                    record.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : record.status === "in-progress"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-blue-100 text-blue-800"
+                                  }
+                                >
+                                  {record.status
+                                    ? record.status.charAt(0).toUpperCase() +
+                                      record.status.slice(1)
+                                    : "Unknown"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm">
+                                  View
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-10 text-gray-600">
+                        <Wrench className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p>No maintenance records found</p>
+                        <p className="text-sm mt-2">
+                          Schedule maintenance to start tracking service history
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+          </TabsContent>
+          <TabsContent value="documents" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Documents</h3>
+              <Button size="sm" onClick={() => setIsUploadDocDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-10 text-gray-600">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No documents available</p>
+                  <p className="text-sm mt-2">
+                    Upload documents like manuals, certificates, or contracts
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="photos" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Photos</h3>
+              <Button
+                size="sm"
+                onClick={() => setIsUploadPhotoDialogOpen(true)}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Upload Photo
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                {equipment.photo_url ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="border rounded-lg p-4">
+                      <div className="w-full h-48 bg-gray-200 rounded mb-3 overflow-hidden">
+                        <img
+                          src={equipment.photo_url}
+                          alt={equipment.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <p className="font-medium">Equipment Photo</p>
+                      <p className="text-sm text-gray-600">
+                        Uploaded{" "}
+                        {equipment.created_at ? (
+                          new Date(equipment.created_at).toLocaleDateString()
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            Not Specified
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-10 text-gray-600">
+                    <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No photos available</p>
+                    <p className="text-sm mt-2">
+                      Upload photos to help identify and track this equipment
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Equipment History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {equipment.created_at && (
+                    <div className="flex items-start space-x-3 p-4 border-l-4 border-blue-500 bg-blue-50">
+                      <div className="flex-1">
+                        <p className="font-medium">Equipment Added to System</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(equipment.created_at).toLocaleDateString()}{" "}
+                          • System
+                        </p>
+                        <p className="text-sm mt-1">
+                          Equipment EQ-
+                          {equipment.id.toString().padStart(3, "0")} was added
+                          to the maintenance system
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {equipment.date_of_installation && (
+                    <div className="flex items-start space-x-3 p-4 border-l-4 border-green-500 bg-green-50">
+                      <div className="flex-1">
+                        <p className="font-medium">Equipment Installed</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(
+                            equipment.date_of_installation
+                          ).toLocaleDateString()}{" "}
+                          • Installation Team
+                        </p>
+                        <p className="text-sm mt-1">
+                          Equipment successfully installed at{" "}
+                          {equipment.department_name || "location"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {equipment.purchase_date && (
+                    <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
+                      <div className="flex-1">
+                        <p className="font-medium">Equipment Purchased</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(
+                            equipment.purchase_date
+                          ).toLocaleDateString()}{" "}
+                          • Procurement
+                        </p>
+                        <p className="text-sm mt-1">
+                          {equipment.purchase_type &&
+                            `Acquisition type: ${
+                              equipment.purchase_type.charAt(0).toUpperCase() +
+                              equipment.purchase_type.slice(1)
+                            }`}
+                          {equipment.purchase_cost &&
+                            ` • Cost: GHS ${Number(
+                              equipment.purchase_cost
+                            ).toLocaleString()}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {equipment.has_service_contract && (
+                    <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          Service Contract Activated
+                        </p>
+                        <p className="text-sm text-gray-600">
                           {equipment.created_at ? (
                             new Date(equipment.created_at).toLocaleDateString()
                           ) : (
                             <span className="text-gray-400 italic">
                               Not Specified
                             </span>
-                          )}
+                          )}{" "}
+                          •{" "}
+                          {equipment.service_organization || "Service Provider"}
+                        </p>
+                        <p className="text-sm mt-1">
+                          Service contract activated with{" "}
+                          {equipment.service_organization || "provider"}
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-10 text-gray-600">
-                      <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p>No photos available</p>
-                      <p className="text-sm mt-2">
-                        Upload photos to help identify and track this equipment
-                      </p>
+                  )}
+                  {equipment.last_service_date && (
+                    <div className="flex items-start space-x-3 p-4 border-l-4 border-orange-500 bg-orange-50">
+                      <div className="flex-1">
+                        <p className="font-medium">Last Service</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(
+                            equipment.last_service_date
+                          ).toLocaleDateString()}{" "}
+                          • Service Team
+                        </p>
+                        <p className="text-sm mt-1">
+                          Most recent service performed on this equipment
+                        </p>
+                      </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="history" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Equipment History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {equipment.created_at && (
-                      <div className="flex items-start space-x-3 p-4 border-l-4 border-blue-500 bg-blue-50">
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            Equipment Added to System
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(
-                              equipment.created_at
-                            ).toLocaleDateString()}{" "}
-                            • System
-                          </p>
-                          <p className="text-sm mt-1">
-                            Equipment EQ-
-                            {equipment.id.toString().padStart(3, "0")} was added
-                            to the maintenance system
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {equipment.date_of_installation && (
-                      <div className="flex items-start space-x-3 p-4 border-l-4 border-green-500 bg-green-50">
-                        <div className="flex-1">
-                          <p className="font-medium">Equipment Installed</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(
-                              equipment.date_of_installation
-                            ).toLocaleDateString()}{" "}
-                            • Installation Team
-                          </p>
-                          <p className="text-sm mt-1">
-                            Equipment successfully installed at{" "}
-                            {equipment.department_name || "location"}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {equipment.purchase_date && (
-                      <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
-                        <div className="flex-1">
-                          <p className="font-medium">Equipment Purchased</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(
-                              equipment.purchase_date
-                            ).toLocaleDateString()}{" "}
-                            • Procurement
-                          </p>
-                          <p className="text-sm mt-1">
-                            {equipment.purchase_type &&
-                              `Acquisition type: ${
-                                equipment.purchase_type
-                                  .charAt(0)
-                                  .toUpperCase() +
-                                equipment.purchase_type.slice(1)
-                              }`}
-                            {equipment.purchase_cost &&
-                              ` • Cost: GHS ${Number(
-                                equipment.purchase_cost
-                              ).toLocaleString()}`}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {equipment.has_service_contract && (
-                      <div className="flex items-start space-x-3 p-4 border-l-4 border-purple-500 bg-purple-50">
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            Service Contract Activated
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {equipment.created_at ? (
-                              new Date(
-                                equipment.created_at
-                              ).toLocaleDateString()
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not Specified
-                              </span>
-                            )}{" "}
-                            •{" "}
-                            {equipment.service_organization ||
-                              "Service Provider"}
-                          </p>
-                          <p className="text-sm mt-1">
-                            Service contract activated with{" "}
-                            {equipment.service_organization || "provider"}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {equipment.last_service_date && (
-                      <div className="flex items-start space-x-3 p-4 border-l-4 border-orange-500 bg-orange-50">
-                        <div className="flex-1">
-                          <p className="font-medium">Last Service</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(
-                              equipment.last_service_date
-                            ).toLocaleDateString()}{" "}
-                            • Service Team
-                          </p>
-                          <p className="text-sm mt-1">
-                            Most recent service performed on this equipment
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Upload Document Dialog */}
@@ -1510,35 +1515,32 @@ export default function EquipmentDetailPage({
 
 function EquipmentDetailSkeleton() {
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Navigation />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <Skeleton className="h-10 w-40" />
-              <Skeleton className="h-8 w-64" />
-            </div>
-            <Skeleton className="h-10 w-32" />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-8 w-64" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="pt-6">
-                  <Skeleton className="h-20 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-96 w-full" />
-            </CardContent>
-          </Card>
+          <Skeleton className="h-10 w-32" />
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-96 w-full" />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

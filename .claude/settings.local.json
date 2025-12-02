@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(npx tsx:*)",
+      "Bash(echo:*)",
+      "Bash(cat:*)",
+      "Bash(awk:*)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

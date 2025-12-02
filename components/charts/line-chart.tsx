@@ -56,7 +56,7 @@ export function LineChartComponent({
 
   const options: ChartOptions<"line"> = {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "top" as const,
