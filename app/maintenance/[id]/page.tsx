@@ -46,7 +46,7 @@ export default function MaintenanceDetailPage({
   // Fetch maintenance details
   const { data: maintenance, isLoading } = useQuery<MaintenanceRecord | undefined>({
     queryKey: ["maintenance", maintenanceId],
-    queryFn: () => api.maintenance.getById(maintenanceId.toString()),
+    queryFn: () => api.maintenance.getById(maintenanceId), 
   });
 
   // Mock data for features not yet in backend
@@ -602,7 +602,6 @@ function MaintenanceDetailSkeleton() {
               <Skeleton className="h-96 w-full" />
             </CardContent>
           </Card>
-        </div>
       </div>
     </div>
   );
