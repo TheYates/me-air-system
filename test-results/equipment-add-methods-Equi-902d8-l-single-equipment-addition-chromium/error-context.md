@@ -1,0 +1,62 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Medical Asset Registry System" [ref=e9] [cursor=pointer]:
+            - /url: /
+            - img [ref=e11]
+            - generic [ref=e13]:
+              - generic [ref=e14]: Medical Asset
+              - generic [ref=e15]: Registry System
+      - list [ref=e19]:
+        - listitem [ref=e20]:
+          - link "Dashboard" [ref=e21] [cursor=pointer]:
+            - /url: /
+            - img [ref=e22]
+            - generic [ref=e25]: Dashboard
+        - listitem [ref=e26]:
+          - link "Equipment" [ref=e27] [cursor=pointer]:
+            - /url: /equipment
+            - img [ref=e28]
+            - generic [ref=e32]: Equipment
+        - listitem [ref=e33]:
+          - link "Maintenance" [ref=e34] [cursor=pointer]:
+            - /url: /maintenance
+            - img [ref=e35]
+            - generic [ref=e37]: Maintenance
+        - listitem [ref=e38]:
+          - link "Departments" [ref=e39] [cursor=pointer]:
+            - /url: /departments
+            - img [ref=e40]
+            - generic [ref=e44]: Departments
+        - listitem [ref=e45]:
+          - link "Schedule" [ref=e46] [cursor=pointer]:
+            - /url: /schedule
+            - img [ref=e47]
+            - generic [ref=e49]: Schedule
+        - listitem [ref=e50]:
+          - link "Reports" [ref=e51] [cursor=pointer]:
+            - /url: /reports
+            - img [ref=e52]
+            - generic [ref=e55]: Reports
+      - list [ref=e57]:
+        - listitem [ref=e58]:
+          - button "JD John Doe Administrator" [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]: JD
+            - generic [ref=e61]:
+              - generic [ref=e62]: John Doe
+              - generic [ref=e63]: Administrator
+            - img [ref=e64]
+      - button "Toggle Sidebar" [ref=e66]
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - button "Toggle Sidebar" [ref=e69] [cursor=pointer]:
+          - img
+          - generic [ref=e70]: Toggle Sidebar
+        - generic [ref=e72]: Equipment
+  - region "Notifications alt+T"
+```

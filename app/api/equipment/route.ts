@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const departmentId = searchParams.get("departmentId");
+    const departmentId = searchParams.get("department") || searchParams.get("departmentId");
     const status = searchParams.get("status");
     const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");

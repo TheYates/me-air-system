@@ -1078,62 +1078,7 @@ export default function DepartmentDetailPage({
                 </div>
               </div>
 
-              {/* Quick Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                          Total Units
-                        </p>
-                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                          {subUnits.length}
-                        </p>
-                      </div>
-                      <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-green-200 dark:border-green-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-                          Equipment
-                        </p>
-                        <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                          {subUnits.reduce(
-                            (sum, unit) => sum + unit.equipmentCount,
-                            0
-                          )}
-                        </p>
-                      </div>
-                      <Package className="h-8 w-8 text-green-600 dark:text-green-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
-                          Active Units
-                        </p>
-                        <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
-                          {
-                            subUnits.filter((unit) => unit.equipmentCount > 0)
-                              .length
-                          }
-                        </p>
-                      </div>
-                      <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            
 
               {/* Sub-units Table */}
               <Card>

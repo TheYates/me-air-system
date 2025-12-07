@@ -355,7 +355,7 @@ export default function Dashboard() {
                 stats.upcomingMaintenance.slice(0, 5).map((item, index) => (
                   <div
                     key={index}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg gap-2 sm:gap-0"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 dark:bg-accent rounded-lg gap-2 sm:gap-0"
                   >
                     <div className="flex-1">
                       <div className="font-medium text-sm md:text-base">{item.equipment_name}</div>

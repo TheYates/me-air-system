@@ -58,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">Medical Asset</span>
                   <span className="text-xs text-muted-foreground">
-                    Equipment Maintenance System
+                    Registry System
                   </span>
                 </div>
               </Link>

@@ -1,0 +1,616 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /
+                  - generic:
+                    - img
+                  - generic:
+                    - generic: Medical Asset
+                    - generic: Registry System
+          - generic:
+            - generic:
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /
+                      - img
+                      - generic: Dashboard
+                  - listitem:
+                    - link:
+                      - /url: /equipment
+                      - img
+                      - generic: Equipment
+                  - listitem:
+                    - link:
+                      - /url: /maintenance
+                      - img
+                      - generic: Maintenance
+                  - listitem:
+                    - link:
+                      - /url: /departments
+                      - img
+                      - generic: Departments
+                  - listitem:
+                    - link:
+                      - /url: /schedule
+                      - img
+                      - generic: Schedule
+                  - listitem:
+                    - link:
+                      - /url: /reports
+                      - img
+                      - generic: Reports
+          - generic:
+            - list:
+              - listitem:
+                - button:
+                  - generic: JD
+                  - generic:
+                    - generic: John Doe
+                    - generic: Administrator
+                  - img
+          - button
+    - main:
+      - generic:
+        - button:
+          - img
+          - generic: Toggle Sidebar
+        - generic:
+          - generic: Equipment
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - button:
+                - img
+                - generic: Print
+              - button:
+                - img
+                - generic: Export
+              - button:
+                - img
+                - generic: Add Equipment
+              - button:
+                - img
+                - generic: Bulk Add (Excel Style)
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - textbox:
+                        - /placeholder: Search equipment...
+                  - generic:
+                    - combobox:
+                      - generic: All Status
+                      - img
+                    - combobox:
+                      - generic: All Departments
+                      - img
+                    - combobox:
+                      - generic: 20 per page
+                      - img
+            - generic:
+              - generic:
+                - generic: Equipment Inventory
+              - generic:
+                - generic:
+                  - generic:
+                    - table:
+                      - rowgroup:
+                        - row:
+                          - columnheader:
+                            - text: Name
+                            - img
+                          - columnheader:
+                            - text: Department
+                            - img
+                          - columnheader:
+                            - text: Status
+                            - img
+                          - columnheader:
+                            - text: Last Maintenance
+                            - img
+                          - columnheader:
+                            - text: Date Added
+                            - img
+                          - columnheader:
+                            - text: Value
+                            - img
+                          - columnheader: Actions
+                      - rowgroup:
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Slide Warmer
+                              - generic: BIOBASE BH-1BH240800034A
+                          - cell:
+                            - generic:
+                              - generic: Laboratory
+                              - generic: Laboratory Annex
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Aug 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Water Bath
+                              - generic: BIOLINE GERMANY DK-420
+                          - cell:
+                            - generic:
+                              - generic: Laboratory
+                              - generic: Laboratory Annex
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Aug 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Microscope
+                              - generic: OLYMPUS OLYMPUS CX23
+                          - cell:
+                            - generic:
+                              - generic: Laboratory
+                              - generic: Laboratory Annex
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Aug 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Centrifuge
+                              - generic: HETTICH EBA 200 S
+                          - cell:
+                            - generic:
+                              - generic: Laboratory
+                              - generic: Laboratory Annex
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Aug 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: ECG Machine
+                              - generic: NORAV 1200HR
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Weighing Scale
+                              - generic: n/a n/a
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Broken
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Vital Signs Monitor
+                              - generic: Omron Healthcare NC3
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Thermometer
+                              - generic: Microlife n/a
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: BP monitor 3
+                              - generic: Omron Healthcare M3 comfort
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: BP monitor 2
+                              - generic: Omron Healthcare M7 Intellli IT
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: BP monitor 1
+                              - generic: Omron Healthcare M7 Intelli IT
+                          - cell:
+                            - generic:
+                              - generic: Occupational Health and Safety
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Baby Weighing Scale
+                              - generic: Salter 235 6s
+                          - cell:
+                            - generic:
+                              - generic: RCH
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Weighing Scale
+                              - generic: n/a n/a
+                          - cell:
+                            - generic:
+                              - generic: RCH
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Weighing Scale
+                              - generic: n/a n/a
+                          - cell:
+                            - generic:
+                              - generic: RCH
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: BP monitor
+                              - generic: Omron M7 intelli IT
+                          - cell:
+                            - generic:
+                              - generic: RCH
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: BP monitor
+                              - generic: Omron M7 intelli IT
+                          - cell:
+                            - generic:
+                              - generic: RCH
+                              - generic: Triage Area
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Ultrasound
+                              - generic: PHILIPS Clear Vue 650
+                          - cell:
+                            - generic:
+                              - generic: RCH
+                              - generic: Ultrasound Room
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 21, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Patient Monitor 7
+                              - generic: COMEN C80
+                          - cell:
+                            - generic:
+                              - generic: THEATRE
+                              - generic: Recovery Unit
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 17, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Overbed Tray 4
+                              - generic: n/a n/a
+                          - cell:
+                            - generic:
+                              - generic: THEATRE
+                              - generic: Recovery Unit
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 17, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Kettle 2
+                              - generic: Dire n/a
+                          - cell:
+                            - generic:
+                              - generic: THEATRE
+                              - generic: Recovery Unit
+                          - cell:
+                            - generic: Operational
+                          - cell: Not Set
+                          - cell: Jul 17, 2025
+                          - cell: Not Set
+                          - cell:
+                            - generic:
+                              - button:
+                                - img
+                              - button:
+                                - img
+                  - generic:
+                    - generic: Showing 1 to 20 of 689 items
+                    - generic:
+                      - button [disabled]: Previous
+                      - generic:
+                        - button: "1"
+                        - button: "2"
+                        - button: "3"
+                        - button: "4"
+                        - button: "5"
+                      - button: Next
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e6] [cursor=pointer]:
+    - img [ref=e7]
+  - alert
+  - dialog "Add Equipment" [ref=e11]:
+    - generic [ref=e12]:
+      - heading "Add Equipment" [level=2] [ref=e13]
+      - paragraph [ref=e14]: Enter the equipment details below. Required fields are marked with an asterisk (*).
+    - generic [ref=e15]:
+      - tablist [ref=e16]:
+        - tab "Equipment Details" [selected] [ref=e17] [cursor=pointer]
+        - tab "Location & Model" [ref=e18] [cursor=pointer]
+        - tab "Costs" [ref=e19] [cursor=pointer]
+        - tab "Service" [ref=e20] [cursor=pointer]
+      - tabpanel "Equipment Details" [ref=e21]:
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - text: Name *
+            - textbox "Name *" [ref=e25]:
+              - /placeholder: Enter equipment name
+              - text: Test MRI Scanner
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - text: Tag Number *
+              - textbox "Tag Number *" [ref=e28]:
+                - /placeholder: Enter tag number
+                - text: TAG-TEST-001
+            - generic [ref=e29]:
+              - text: Year Manufactured
+              - spinbutton "Year Manufactured" [ref=e30]: "2023"
+            - generic [ref=e31]:
+              - text: Date of Installation
+              - textbox "Date of Installation" [ref=e32]: 2023-06-15
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - text: Manufacturer *
+              - textbox "Manufacturer *" [ref=e35]:
+                - /placeholder: Enter manufacturer
+                - text: Siemens Healthcare
+            - generic [ref=e36]:
+              - text: Country
+              - textbox "Country" [ref=e37]:
+                - /placeholder: Country of origin
+                - text: Germany
+            - generic [ref=e38]:
+              - text: Owner
+              - textbox "Owner" [ref=e39]:
+                - /placeholder: Equipment owner
+                - text: Hospital Trust
+          - generic [ref=e40]:
+            - text: Maintained By
+            - textbox "Maintained By" [ref=e41]:
+              - /placeholder: Maintainer
+              - text: Biomedical Engineering
+          - generic [ref=e42]:
+            - heading "Equipment Photo" [level=3] [ref=e43]
+            - generic [ref=e44]:
+              - img [ref=e46]
+              - generic [ref=e50]:
+                - button "Choose File" [ref=e51] [cursor=pointer]
+                - paragraph [ref=e52]: "Upload a clear photo of the equipment. Max size: 5MB."
+          - generic [ref=e53]:
+            - text: Warranty Information
+            - textbox "Warranty Information" [active] [ref=e54]:
+              - /placeholder: Enter warranty details
+              - text: 5 year comprehensive warranty
+    - generic [ref=e55]:
+      - button "Previous" [disabled]
+      - button "Next" [ref=e56] [cursor=pointer]
+    - button "Close" [ref=e57] [cursor=pointer]:
+      - img [ref=e58]
+      - generic [ref=e61]: Close
+```

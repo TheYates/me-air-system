@@ -332,58 +332,48 @@ export default function DepartmentsPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto px-6 pt-4 pb-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Department Management
-              </h1>
-              <Badge variant="secondary">
-                {departmentData.length} departments
-              </Badge>
+          <div className="flex items-center justify-end mb-4 space-x-2">
+            {/* View Toggle */}
+            <div className="flex items-center border rounded-lg p-1">
+              <Button
+                variant={viewMode === "card" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("card")}
+                className="h-8 px-3"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="h-8 px-3"
+              >
+                <List className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="flex items-center space-x-2">
-              {/* View Toggle */}
-              <div className="flex items-center border rounded-lg p-1">
-                <Button
-                  variant={viewMode === "card" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("card")}
-                  className="h-8 px-3"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "table" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
-                  className="h-8 px-3"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
 
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Department
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Add New Department</DialogTitle>
-                  </DialogHeader>
-                  <DepartmentForm />
-                </DialogContent>
-              </Dialog>
-            </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Department
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Department</DialogTitle>
+                </DialogHeader>
+                <DepartmentForm />
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Search */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
+          <Card className="mb-4">
+            <CardContent className="pt-4">
               <div className="relative max-w-md">
                 <Input
                   placeholder="Search departments..."
@@ -468,56 +458,17 @@ export default function DepartmentsPage() {
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-sm font-bold">
-                            {formatCurrency(department.total_value)}
+                          <div className="flex items-center justify-center mb-0.5">
+                            <Users className="h-3 w-3 text-purple-500" />
+                          </div>
+                          <div className="text-base font-bold">
+                            {subUnits.length}
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-300">
-                            Value
+                            Sub-units
                           </div>
                         </div>
                       </div>
-
-                      {/* Sub-units */}
-                      {sortedSubUnits.length > 0 && (
-                        <div className="space-y-1 pt-2 border-t">
-                          <div className="text-xs text-gray-600 dark:text-gray-100 mb-1">
-                            Sub-units ({sortedSubUnits.length})
-                          </div>
-                          <div className="space-y-0.5">
-                            {sortedSubUnits.slice(0, 2).map((subUnit, idx) => {
-                              const subUnitCount = deptEquipment.filter(
-                                (eq: any) => eq.sub_unit === subUnit
-                              ).length;
-                              return (
-                                <div
-                                  key={idx}
-                                  className="text-sm text-gray-700 dark:text-gray-400 cursor-pointer hover:text-blue-600 flex justify-between items-center"
-                                  onClick={() => {
-                                    setSelectedDepartment(department);
-                                    setIsSubUnitEquipmentDialogOpen(true);
-                                  }}
-                                >
-                                  <span>{subUnit}</span>
-                                  <span className="text-xs text-gray-500">
-                                    {subUnitCount}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                            {sortedSubUnits.length > 2 && (
-                              <div
-                                className="text-xs text-gray-500 cursor-pointer hover:text-blue-600"
-                                onClick={() => {
-                                  setSelectedDepartment(department);
-                                  setIsSubUnitEquipmentDialogOpen(true);
-                                }}
-                              >
-                                +{sortedSubUnits.length - 2} more
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
                       {/* Actions */}
                       <div className="flex space-x-1 pt-2">
@@ -558,7 +509,7 @@ export default function DepartmentsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
+                      <TableHead>#</TableHead>
                       <TableHead>Department</TableHead>
                       <TableHead>Manager</TableHead>
                       <TableHead>Contact</TableHead>
@@ -571,7 +522,7 @@ export default function DepartmentsPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredDepartments.length > 0 ? (
-                      filteredDepartments.map((department) => {
+                      filteredDepartments.map((department, index) => {
                         // Get equipment for this department
                         const deptEquipment = allEquipment.filter(
                           (eq: any) => eq.department_id === department.id
@@ -594,7 +545,7 @@ export default function DepartmentsPage() {
                         return (
                           <TableRow key={department.id}>
                             <TableCell className="font-medium">
-                              DEPT-{department.id.toString().padStart(3, "0")}
+                              {index + 1}
                             </TableCell>
                             <TableCell>
                               <div className="font-medium">
@@ -639,7 +590,7 @@ export default function DepartmentsPage() {
                                       return (
                                         <div
                                           key={idx}
-                                          className="text-sm text-gray-700 cursor-pointer hover:text-blue-600 flex justify-between items-center gap-2"
+                                          className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 flex justify-between items-center gap-2"
                                           onClick={() => {
                                             setSelectedDepartment(department);
                                             setIsSubUnitEquipmentDialogOpen(
@@ -648,9 +599,9 @@ export default function DepartmentsPage() {
                                           }}
                                         >
                                           <span>{subUnit}</span>
-                                          <span className="text-xs text-gray-500">
+                                          {/* <span className="text-xs text-gray-500">
                                             {subUnitCount}
-                                          </span>
+                                          </span> */}
                                         </div>
                                       );
                                     })}
@@ -828,13 +779,12 @@ export default function DepartmentsPage() {
 
 function DepartmentsSkeleton() {
   return (
-    <div className="flex-1 space-y-4 overflow-auto">
-          <div className="flex items-center justify-between mb-6">
-            <Skeleton className="h-8 w-64" />
+    <div className="flex-1 space-y-4 overflow-auto px-6 pt-4 pb-6">
+          <div className="flex items-center justify-end mb-4">
             <Skeleton className="h-10 w-48" />
           </div>
-          <Card className="mb-6">
-            <CardContent className="pt-6">
+          <Card className="mb-4">
+            <CardContent className="pt-4">
               <Skeleton className="h-10 w-full max-w-md" />
             </CardContent>
           </Card>

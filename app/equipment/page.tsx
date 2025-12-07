@@ -126,9 +126,9 @@ export default function EquipmentPage() {
     error: equipmentError,
   } = useQuery({
     queryKey: queryKeys.list({
-      search: debouncedSearchTerm,
-      status: statusFilter,
-      department: departmentFilter,
+      search: debouncedSearchTerm || undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      department: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
       page: currentPage,
       limit: itemsPerPage,
     }),
@@ -183,9 +183,9 @@ export default function EquipmentPage() {
     try {
       // Optimistically update the local cache
       const currentQueryKey = queryKeys.list({
-        search: debouncedSearchTerm,
-        status: statusFilter,
-        department: departmentFilter,
+        search: debouncedSearchTerm || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        department: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
         page: currentPage,
         limit: itemsPerPage,
       });
@@ -205,20 +205,10 @@ export default function EquipmentPage() {
       // Make the API call
       const response = await api.equipment.updateStatus(equipmentId, newStatus);
 
-      // Update the cache with the server response to ensure consistency
-      if (previousData && previousData.data) {
-        queryClient.setQueryData(currentQueryKey, {
-          ...previousData,
-          data: previousData.data.map((item: Equipment) =>
-            item.id === equipmentId
-              ? { ...item, status: response.status }
-              : item
-          ),
-        });
-      }
-
-      // Also update the equipment detail query if it exists
-      queryClient.setQueryData(["equipment", equipmentId], response);
+      // Invalidate all equipment queries to ensure fresh data everywhere
+      await queryClient.invalidateQueries({
+        queryKey: ["equipment"],
+      });
 
       sonnerToast.success(
         `Status updated to ${
@@ -261,9 +251,9 @@ export default function EquipmentPage() {
     try {
       // Optimistically remove from cache
       const currentQueryKey = queryKeys.list({
-        search: debouncedSearchTerm,
-        status: statusFilter,
-        department: departmentFilter,
+        search: debouncedSearchTerm || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        department: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
         page: currentPage,
         limit: itemsPerPage,
       });
@@ -480,15 +470,9 @@ export default function EquipmentPage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-auto p-3 md:p-6">
+      <div className="flex-1 overflow-auto px-3 md:px-6 pt-3 md:pt-4 pb-3 md:pb-6">
           {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                Equipment Management
-              </h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-end gap-2 mb-3 md:mb-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -525,12 +509,11 @@ export default function EquipmentPage() {
                 <span className="hidden md:inline">Bulk Add (Excel Style)</span>
                 <span className="md:hidden">Bulk Add</span>
               </Button>
-            </div>
           </div>
 
           {/* Filters */}
-          <Card className="mb-4 md:mb-6">
-            <CardContent className="pt-4 md:pt-6 px-4 md:px-6">
+          <Card className="mb-3 md:mb-4">
+            <CardContent className="pt-3 md:pt-4 px-4 md:px-6">
               <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
                 <div className="flex-1">
                   <div className="relative">
@@ -2412,13 +2395,12 @@ function BulkAddEquipmentDialog({
 
 function EquipmentSkeleton() {
   return (
-    <div className="flex-1 space-y-4 overflow-auto">
-          <div className="flex items-center justify-between mb-6">
-            <Skeleton className="h-8 w-64" />
+    <div className="flex-1 space-y-4 overflow-auto px-3 md:px-6 pt-3 md:pt-4 pb-3 md:pb-6">
+          <div className="flex items-center justify-end mb-3 md:mb-4">
             <Skeleton className="h-10 w-32" />
           </div>
-          <Card className="mb-6">
-            <CardContent className="pt-6">
+          <Card className="mb-3 md:mb-4">
+            <CardContent className="pt-3 md:pt-4">
               <div className="flex gap-4">
                 <Skeleton className="flex-1 h-10" />
                 <Skeleton className="w-48 h-10" />

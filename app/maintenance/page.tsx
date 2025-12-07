@@ -277,51 +277,44 @@ export default function MaintenancePage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto px-6 pt-4 pb-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Maintenance Management
-            </h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              Calendar View
-            </Button>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
+        <div className="flex items-center justify-end mb-4 space-x-2">
+          <Button variant="outline" size="sm">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Calendar View
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Schedule Maintenance
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Schedule New Maintenance</DialogTitle>
+              </DialogHeader>
+              <MaintenanceForm />
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={() => setIsAddDialogOpen(false)}>
                   Schedule Maintenance
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Schedule New Maintenance</DialogTitle>
-                </DialogHeader>
-                <MaintenanceForm />
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={() => setIsAddDialogOpen(false)}>
-                    Schedule Maintenance
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-white">
@@ -334,7 +327,7 @@ export default function MaintenancePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-white">
@@ -347,7 +340,7 @@ export default function MaintenancePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-white">
@@ -360,7 +353,7 @@ export default function MaintenancePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-white ">
@@ -375,8 +368,8 @@ export default function MaintenancePage() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
+        <Card className="mb-4">
+          <CardContent className="pt-4">
             <div className="flex flex-wrap gap-4">
               <div className="flex-1 min-w-64">
                 <div className="relative">
@@ -427,37 +420,37 @@ export default function MaintenancePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead
-                    className="cursor-pointer hover:bg-gray-100"
+                    className="cursor-pointer hover:bg-accent"
                     onClick={() => handleSort("equipment_name")}
                   >
                     Equipment {renderSortIcon("equipment_name")}
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-gray-100"
+                    className="cursor-pointer hover:bg-accent"
                     onClick={() => handleSort("type")}
                   >
                     Type {renderSortIcon("type")}
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-gray-100"
+                    className="cursor-pointer hover:bg-accent"
                     onClick={() => handleSort("status")}
                   >
                     Status {renderSortIcon("status")}
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-gray-100"
+                    className="cursor-pointer hover:bg-accent"
                     onClick={() => handleSort("priority")}
                   >
                     Priority {renderSortIcon("priority")}
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-gray-100"
+                    className="cursor-pointer hover:bg-accent"
                     onClick={() => handleSort("technician")}
                   >
                     Assigned To {renderSortIcon("technician")}
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-gray-100"
+                    className="cursor-pointer hover:bg-accent"
                     onClick={() => handleSort("date")}
                   >
                     Scheduled Date {renderSortIcon("date")}
@@ -475,7 +468,7 @@ export default function MaintenancePage() {
                           <div className="font-medium">
                             {maintenance.equipment_name || "N/A"}
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-400">
                             {maintenance.equipmentId
                               ? `EQ-${maintenance.equipmentId
                                   .toString()
@@ -685,15 +678,14 @@ const getPriorityColor = (priority: string) => {
 
 function MaintenanceSkeleton() {
   return (
-    <div className="flex-1 space-y-4 overflow-auto">
-      <div className="flex items-center justify-between mb-6">
-        <Skeleton className="h-8 w-64" />
+    <div className="flex-1 space-y-4 overflow-auto px-6 pt-4 pb-6">
+      <div className="flex items-center justify-end mb-4">
         <Skeleton className="h-10 w-48" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <Skeleton className="h-20 w-full" />
             </CardContent>
           </Card>

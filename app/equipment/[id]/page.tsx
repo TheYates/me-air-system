@@ -101,6 +101,8 @@ export default function EquipmentDetailPage({
   const [isEditSpecsDialogOpen, setIsEditSpecsDialogOpen] = useState(false);
   const [specifications, setSpecifications] = useState<any[]>([]);
   const [isSavingSpecs, setIsSavingSpecs] = useState(false);
+  const [editingSpecs, setEditingSpecs] = useState<any[]>([]);
+  const [deletedSpecIds, setDeletedSpecIds] = useState<Set<number>>(new Set());
 
   // Fetch equipment details
   const { data: equipment, isLoading } = useQuery<Equipment>({
@@ -137,6 +139,27 @@ export default function EquipmentDetailPage({
     }
   }, [fetchedSpecifications.length]);
 
+  // Initialize editing specs when dialog opens
+  const handleOpenEditDialog = () => {
+    // Create a copy of current specifications
+    const currentSpecs = specifications.filter(
+      (spec) => spec.specificationKey && spec.specificationKey.trim() !== ""
+    );
+    
+    // Ensure we have at least 3 rows
+    const rowsToShow = Math.max(3, currentSpecs.length);
+    const initialRows = [...currentSpecs];
+    
+    // Fill with empty rows to reach 3 minimum
+    for (let i = currentSpecs.length; i < rowsToShow; i++) {
+      initialRows.push({ specificationKey: "", specificationValue: "" });
+    }
+    
+    setEditingSpecs(initialRows);
+    setDeletedSpecIds(new Set());
+    setIsEditSpecsDialogOpen(true);
+  };
+
   // Handle status update
   const handleStatusUpdate = async (newStatus: string) => {
     if (!equipment) return;
@@ -151,9 +174,9 @@ export default function EquipmentDetailPage({
       // Make the API call
       await api.equipment.updateStatus(equipmentId, newStatus);
 
-      // Invalidate and refetch
+      // Invalidate all equipment queries to ensure fresh data everywhere
       await queryClient.invalidateQueries({
-        queryKey: ["equipment", equipmentId],
+        queryKey: ["equipment"],
       });
 
       sonnerToast.success(
@@ -169,7 +192,7 @@ export default function EquipmentDetailPage({
     } catch (error) {
       // Revert optimistic update
       queryClient.invalidateQueries({
-        queryKey: ["equipment", equipmentId],
+        queryKey: ["equipment"],
       });
 
       sonnerToast.error("Failed to update status", {
@@ -189,9 +212,14 @@ export default function EquipmentDetailPage({
     try {
       setIsSavingSpecs(true);
 
-      // Filter out empty specifications
-      const validSpecs = specifications.filter(
-        (spec) => spec.specificationKey && spec.specificationKey.trim() !== ""
+      // Filter out empty specifications and those marked for deletion
+      const validSpecs = editingSpecs.filter(
+        (spec, index) => {
+          // Skip if marked for deletion
+          if (deletedSpecIds.has(index)) return false;
+          // Skip if both key and value are empty
+          return spec.specificationKey && spec.specificationKey.trim() !== "";
+        }
       );
 
       await api.equipment.saveSpecifications(equipmentId, validSpecs);
@@ -217,6 +245,32 @@ export default function EquipmentDetailPage({
     } finally {
       setIsSavingSpecs(false);
     }
+  };
+
+  // Handle add specification row
+  const handleAddSpecRow = () => {
+    setEditingSpecs([
+      ...editingSpecs,
+      { specificationKey: "", specificationValue: "" },
+    ]);
+  };
+
+  // Handle delete specification row
+  const handleDeleteSpecRow = (index: number) => {
+    const newDeletedIds = new Set(deletedSpecIds);
+    if (deletedSpecIds.has(index)) {
+      newDeletedIds.delete(index);
+    } else {
+      newDeletedIds.add(index);
+    }
+    setDeletedSpecIds(newDeletedIds);
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setEditingSpecs([]);
+    setDeletedSpecIds(new Set());
+    setIsEditSpecsDialogOpen(false);
   };
 
   if (isLoading) {
@@ -788,7 +842,7 @@ export default function EquipmentDetailPage({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsEditSpecsDialogOpen(true)}
+                    onClick={handleOpenEditDialog}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Specifications
@@ -1409,77 +1463,130 @@ export default function EquipmentDetailPage({
       {/* Edit Specifications Dialog */}
       <Dialog
         open={isEditSpecsDialogOpen}
-        onOpenChange={setIsEditSpecsDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCancelEdit();
+        }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Technical Specifications</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            {specifications.map((spec, index) => (
-              <div key={index} className="space-y-2 p-4 border rounded-lg">
-                <div className="flex items-center justify-between">
-                  <Label>Specification {index + 1}</Label>
-                  {specifications.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSpecifications(
-                          specifications.filter((_, i) => i !== index)
-                        );
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-gray-600">Key</Label>
-                    <Input
-                      placeholder="e.g., Power Consumption"
-                      value={spec.specificationKey || ""}
-                      onChange={(e) => {
-                        const newSpecs = [...specifications];
-                        newSpecs[index].specificationKey = e.target.value;
-                        setSpecifications(newSpecs);
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">Value</Label>
-                    <Input
-                      placeholder="e.g., 500W"
-                      value={spec.specificationValue || ""}
-                      onChange={(e) => {
-                        const newSpecs = [...specifications];
-                        newSpecs[index].specificationValue = e.target.value;
-                        setSpecifications(newSpecs);
-                      }}
-                    />
-                  </div>
-                </div>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="overflow-auto flex-1 border rounded-lg">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white dark:bg-gray-950 z-10">
+                  <TableRow className="h-9">
+                    <TableHead className="w-[40px] py-2 text-xs">#</TableHead>
+                    <TableHead className="w-[40%] py-2 text-xs">Specification Key</TableHead>
+                    <TableHead className="w-[40%] py-2 text-xs">Value</TableHead>
+                    <TableHead className="w-[80px] text-center py-2 text-xs">
+                      Action
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {editingSpecs.map((spec, index) => {
+                    const isDeleted = deletedSpecIds.has(index);
+                    return (
+                      <TableRow
+                        key={index}
+                        className={
+                          isDeleted
+                            ? "bg-red-50 dark:bg-red-950/20 opacity-50 h-10"
+                            : "h-10"
+                        }
+                      >
+                        <TableCell className="font-medium text-gray-500 text-xs py-1">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell className="py-1">
+                          <Input
+                            placeholder="e.g., Power Consumption"
+                            value={spec.specificationKey || ""}
+                            onChange={(e) => {
+                              const newSpecs = [...editingSpecs];
+                              newSpecs[index].specificationKey = e.target.value;
+                              setEditingSpecs(newSpecs);
+                            }}
+                            disabled={isDeleted}
+                            className={
+                              isDeleted
+                                ? "bg-transparent border-transparent h-8 text-sm"
+                                : "h-8 text-sm"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="py-1">
+                          <Input
+                            placeholder="e.g., 500W"
+                            value={spec.specificationValue || ""}
+                            onChange={(e) => {
+                              const newSpecs = [...editingSpecs];
+                              newSpecs[index].specificationValue =
+                                e.target.value;
+                              setEditingSpecs(newSpecs);
+                            }}
+                            disabled={isDeleted}
+                            className={
+                              isDeleted
+                                ? "bg-transparent border-transparent h-8 text-sm"
+                                : "h-8 text-sm"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="text-center py-1">
+                          <Button
+                            variant={isDeleted ? "outline" : "ghost"}
+                            size="icon"
+                            onClick={() => handleDeleteSpecRow(index)}
+                            className={
+                              isDeleted
+                                ? "text-green-600 hover:text-green-700 h-7 w-7"
+                                : "text-red-600 hover:text-red-700 h-7 w-7"
+                            }
+                          >
+                            {isDeleted ? (
+                              <>
+                                <Plus className="h-3.5 w-3.5" />
+                                <span className="sr-only">Restore</span>
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-3.5 w-3.5" />
+                                <span className="sr-only">Delete</span>
+                              </>
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="pt-3 flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddSpecRow}
+                className="flex items-center gap-1.5 h-8 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Specification
+              </Button>
+              <div className="text-xs text-gray-500">
+                {deletedSpecIds.size > 0 && (
+                  <span className="text-red-600">
+                    {deletedSpecIds.size} row(s) marked for deletion
+                  </span>
+                )}
               </div>
-            ))}
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setSpecifications([
-                  ...specifications,
-                  { specificationKey: "", specificationValue: "" },
-                ]);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Specification
-            </Button>
+            </div>
           </div>
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button
               variant="outline"
-              onClick={() => setIsEditSpecsDialogOpen(false)}
+              onClick={handleCancelEdit}
               disabled={isSavingSpecs}
             >
               Cancel

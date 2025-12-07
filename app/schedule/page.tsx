@@ -102,41 +102,34 @@ export default function SchedulePage() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto px-6 pt-4 pb-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Maintenance Schedule
-            </h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 bg-white rounded-lg border dark:bg-background">
-              <Button
-                variant={viewMode === "week" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("week")}
-              >
-                Week
-              </Button>
-              <Button
-                variant={viewMode === "month" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("month")}
-              >
-                Month
-              </Button>
-            </div>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule Maintenance
+        <div className="flex items-center justify-end mb-4 space-x-2">
+          <div className="flex items-center space-x-1 bg-white rounded-lg border dark:bg-background">
+            <Button
+              variant={viewMode === "week" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("week")}
+            >
+              Week
+            </Button>
+            <Button
+              variant={viewMode === "month" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("month")}
+            >
+              Month
             </Button>
           </div>
+          <Button size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule Maintenance
+          </Button>
         </div>
 
         {/* Calendar Navigation */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
+        <Card className="mb-4">
+          <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <Button
                 variant="outline"
@@ -314,13 +307,12 @@ export default function SchedulePage() {
 
 function ScheduleSkeleton() {
   return (
-    <div className="flex-1 space-y-4 overflow-auto">
-      <div className="flex items-center justify-between mb-6">
-        <Skeleton className="h-8 w-64" />
+    <div className="flex-1 space-y-4 overflow-auto px-6 pt-4 pb-6">
+      <div className="flex items-center justify-end mb-4">
         <Skeleton className="h-10 w-48" />
       </div>
-      <Card className="mb-6">
-        <CardContent className="pt-6">
+      <Card className="mb-4">
+        <CardContent className="pt-4">
           <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
