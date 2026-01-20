@@ -935,7 +935,7 @@ export default function EquipmentDetailPage({
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-900">
+                    <h4 className="font-semibold text-gray-600">
                       Service Coverage
                     </h4>
                     <div className="space-y-3">

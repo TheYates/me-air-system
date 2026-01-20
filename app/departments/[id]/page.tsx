@@ -333,7 +333,7 @@ export default function DepartmentDetailPage({
   // Fetch equipment for this department
   const { data: equipmentResponse, isLoading: isEquipmentLoading } = useQuery({
     queryKey: ["department-equipment", departmentId],
-    queryFn: () => api.equipment.list({ department: departmentId }),
+    queryFn: () => api.equipment.list({ department: departmentId, limit: 1000 }),
     enabled: !!departmentId,
   });
 

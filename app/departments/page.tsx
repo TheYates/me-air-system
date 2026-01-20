@@ -95,7 +95,7 @@ export default function DepartmentsPage() {
   // Fetch equipment for sub-unit dialogs
   const { data: equipmentResponse } = useQuery({
     queryKey: ["equipment-list"],
-    queryFn: () => api.equipment.list({}),
+    queryFn: () => api.equipment.list({ limit: 2000 }),
   });
 
   const allEquipment = equipmentResponse?.data || [];
