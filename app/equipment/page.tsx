@@ -40,6 +40,9 @@ import {
   ArrowDown,
   Trash2,
   Printer,
+  FileSpreadsheet,
+  FileText,
+  FileType,
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
@@ -82,6 +85,17 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  DEFAULT_REPORT_COLUMNS,
+  buildReportTable,
+  hasSelectedColumns,
+  type ReportColumns,
+} from "@/lib/equipment-report-columns";
+import {
+  exportEquipment,
+  type ExportFormat,
+} from "@/lib/equipment-export";
+import { EquipmentReportColumnPicker } from "@/components/equipment-report-column-picker";
 
 export default function EquipmentPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -99,16 +113,11 @@ export default function EquipmentPage() {
     name: string;
   } | null>(null);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
-  const [printColumns, setPrintColumns] = useState({
-    name: true,
-    manufacturer: true,
-    department: true,
-    subUnit: true,
-    status: true,
-    dateAdded: true,
-    value: true,
-    tagNumber: false,
-    lastMaintenance: false,
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
+  const [isExporting, setIsExporting] = useState(false);
+  const [reportColumns, setReportColumns] = useState<ReportColumns>({
+    ...DEFAULT_REPORT_COLUMNS,
   });
 
   const router = useRouter();
@@ -364,41 +373,62 @@ export default function EquipmentPage() {
     setIsPrintDialogOpen(true);
   };
 
+  const handleExportClick = () => {
+    setIsExportDialogOpen(true);
+  };
+
+  const handleExport = async () => {
+    if (!hasSelectedColumns(reportColumns)) {
+      sonnerToast.error("Select at least one column to export.");
+      return;
+    }
+    if (sortedEquipmentData.length === 0) {
+      sonnerToast.error("No equipment data to export.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      await exportEquipment(
+        exportFormat,
+        sortedEquipmentData,
+        reportColumns,
+        "equipment-inventory",
+        {
+          generatedOn: new Date().toLocaleDateString(),
+          totalCount: sortedEquipmentData.length,
+        }
+      );
+      setIsExportDialogOpen(false);
+      sonnerToast.success(
+        `Exported ${sortedEquipmentData.length} equipment record${
+          sortedEquipmentData.length === 1 ? "" : "s"
+        } as ${exportFormat.toUpperCase()}`
+      );
+    } catch {
+      sonnerToast.error("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Print functionality with selected columns
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
+    if (!hasSelectedColumns(reportColumns)) {
+      sonnerToast.error("Select at least one column to print");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     const currentDate = new Date().toLocaleDateString();
     const totalEquipment = sortedEquipmentData.length;
+    const { headers, rows } = buildReportTable(
+      sortedEquipmentData,
+      reportColumns
+    );
 
-    // Build headers based on selected columns
-    const headers = [];
-    if (printColumns.name) headers.push('Equipment Name');
-    if (printColumns.tagNumber) headers.push('Tag Number');
-    if (printColumns.manufacturer) headers.push('Manufacturer');
-    if (printColumns.department) headers.push('Department');
-    if (printColumns.subUnit) headers.push('Sub Unit');
-    if (printColumns.status) headers.push('Status');
-    if (printColumns.lastMaintenance) headers.push('Last Maintenance');
-    if (printColumns.dateAdded) headers.push('Date Added');
-    if (printColumns.value) headers.push('Value (GHS)');
-
-    // Build rows based on selected columns
-    const buildRow = (equipment: Equipment) => {
-      const cells = [];
-      if (printColumns.name) cells.push(equipment.name);
-      if (printColumns.tagNumber) cells.push(equipment.tag_number || 'Not Set');
-      if (printColumns.manufacturer) cells.push(`${equipment.manufacturer} ${equipment.model || ''}`);
-      if (printColumns.department) cells.push(equipment.department_name || 'Unassigned');
-      if (printColumns.subUnit) cells.push(equipment.sub_unit || 'Not Specified');
-      if (printColumns.status) cells.push(equipment.status ? equipment.status.charAt(0).toUpperCase() + equipment.status.slice(1) : 'Unknown');
-      if (printColumns.lastMaintenance) cells.push(equipment.last_service_date ? new Date(equipment.last_service_date).toLocaleDateString() : 'Not Set');
-      if (printColumns.dateAdded) cells.push(equipment.createdAt || equipment.created_at ? new Date(equipment.createdAt || equipment.created_at!).toLocaleDateString() : 'Not Available');
-      if (printColumns.value) cells.push(equipment.purchase_cost ? `${Number(equipment.purchase_cost).toLocaleString()}` : 'Not Set');
-      return cells;
-    };
-    
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -438,11 +468,12 @@ export default function EquipmentPage() {
               </tr>
             </thead>
             <tbody>
-              ${sortedEquipmentData.map(equipment => `
-                <tr>
-                  ${buildRow(equipment).map(cell => `<td>${cell}</td>`).join('')}
-                </tr>
-              `).join('')}
+              ${rows
+                .map(
+                  (row) =>
+                    `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`
+                )
+                .join("")}
             </tbody>
           </table>
           
@@ -486,6 +517,7 @@ export default function EquipmentPage() {
                 variant="outline"
                 size="sm"
                 className="text-xs flex-1 sm:flex-none"
+                onClick={handleExportClick}
               >
                 <Download className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Export</span>
@@ -935,139 +967,110 @@ export default function EquipmentPage() {
 
       {/* Print Column Selection Dialog */}
       <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select Columns to Print</DialogTitle>
             <DialogDescription>
               Choose which columns to include in your equipment report.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="name"
-                  checked={printColumns.name}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, name: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="name">Equipment Name</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="tagNumber"
-                  checked={printColumns.tagNumber}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, tagNumber: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="tagNumber">Tag Number</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="manufacturer"
-                  checked={printColumns.manufacturer}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, manufacturer: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="manufacturer">Manufacturer</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="department"
-                  checked={printColumns.department}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, department: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="department">Department</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="subUnit"
-                  checked={printColumns.subUnit}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, subUnit: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="subUnit">Sub Unit</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="status"
-                  checked={printColumns.status}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, status: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="status">Status</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="lastMaintenance"
-                  checked={printColumns.lastMaintenance}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, lastMaintenance: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="lastMaintenance">Last Maintenance</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="dateAdded"
-                  checked={printColumns.dateAdded}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, dateAdded: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="dateAdded">Date Added</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="value"
-                  checked={printColumns.value}
-                  onCheckedChange={(checked) =>
-                    setPrintColumns(prev => ({ ...prev, value: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="value">Value (GHS)</Label>
-              </div>
-            </div>
+          <EquipmentReportColumnPicker
+            idPrefix="print"
+            columns={reportColumns}
+            onChange={setReportColumns}
+          />
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsPrintDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print Report
+            </Button>
           </div>
-          <div className="flex justify-between gap-3 pt-4">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPrintColumns({
-                  name: true,
-                  manufacturer: true,
-                  department: true,
-                  subUnit: true,
-                  status: true,
-                  dateAdded: true,
-                  value: true,
-                  tagNumber: false,
-                  lastMaintenance: false,
-                })}
-              >
-                Reset to Default
-              </Button>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsPrintDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Report
-              </Button>
-            </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Export Equipment</DialogTitle>
+            <DialogDescription>
+              Choose a file format and columns for the current page (
+              {sortedEquipmentData.length} record
+              {sortedEquipmentData.length === 1 ? "" : "s"}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">File format</Label>
+            <RadioGroup
+              value={exportFormat}
+              onValueChange={(value) => setExportFormat(value as ExportFormat)}
+              className="grid gap-2"
+            >
+              <div className="flex items-center space-x-2 rounded-md border p-3">
+                <RadioGroupItem value="csv" id="export-csv" />
+                <Label
+                  htmlFor="export-csv"
+                  className="flex flex-1 cursor-pointer items-center gap-2 font-normal"
+                >
+                  <FileType className="h-4 w-4 text-muted-foreground" />
+                  CSV (.csv)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-md border p-3">
+                <RadioGroupItem value="xlsx" id="export-xlsx" />
+                <Label
+                  htmlFor="export-xlsx"
+                  className="flex flex-1 cursor-pointer items-center gap-2 font-normal"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                  Excel (.xlsx)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-md border p-3">
+                <RadioGroupItem value="pdf" id="export-pdf" />
+                <Label
+                  htmlFor="export-pdf"
+                  className="flex flex-1 cursor-pointer items-center gap-2 font-normal"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  PDF (.pdf)
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <Label className="text-sm font-medium">Columns</Label>
+            <EquipmentReportColumnPicker
+              idPrefix="export"
+              columns={reportColumns}
+              onChange={setReportColumns}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsExportDialogOpen(false)}
+              disabled={isExporting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
