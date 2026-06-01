@@ -6,6 +6,8 @@ import {
 
 export type ExportFormat = "csv" | "xlsx" | "pdf";
 
+export type ExportScope = "page" | "filtered";
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

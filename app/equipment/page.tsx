@@ -43,6 +43,8 @@ import {
   FileSpreadsheet,
   FileText,
   FileType,
+  List,
+  Filter,
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
@@ -94,8 +96,30 @@ import {
 import {
   exportEquipment,
   type ExportFormat,
+  type ExportScope,
 } from "@/lib/equipment-export";
 import { EquipmentReportColumnPicker } from "@/components/equipment-report-column-picker";
+
+function sortEquipmentList(
+  data: Equipment[],
+  sortColumn: string | null,
+  sortDirection: "asc" | "desc"
+): Equipment[] {
+  if (!sortColumn) return data;
+
+  return [...data].sort((a, b) => {
+    let aValue: unknown = a[sortColumn as keyof Equipment];
+    let bValue: unknown = b[sortColumn as keyof Equipment];
+
+    if (aValue === null || aValue === undefined) return 1;
+    if (bValue === null || bValue === undefined) return -1;
+
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+    const comparison = aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
+}
 
 export default function EquipmentPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -115,6 +139,7 @@ export default function EquipmentPage() {
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
+  const [exportScope, setExportScope] = useState<ExportScope>("page");
   const [isExporting, setIsExporting] = useState(false);
   const [reportColumns, setReportColumns] = useState<ReportColumns>({
     ...DEFAULT_REPORT_COLUMNS,
@@ -321,24 +346,16 @@ export default function EquipmentPage() {
     }
   };
 
-  // Sort equipment data
-  const sortedEquipmentData = [...equipmentData].sort((a, b) => {
-    if (!sortColumn) return 0;
+  const sortedEquipmentData = sortEquipmentList(
+    equipmentData,
+    sortColumn,
+    sortDirection
+  );
 
-    let aValue: any = a[sortColumn as keyof Equipment];
-    let bValue: any = b[sortColumn as keyof Equipment];
-
-    // Handle null/undefined values
-    if (aValue === null || aValue === undefined) return 1;
-    if (bValue === null || bValue === undefined) return -1;
-
-    // Convert to strings for comparison
-    aValue = String(aValue).toLowerCase();
-    bValue = String(bValue).toLowerCase();
-
-    const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-    return sortDirection === "asc" ? comparison : -comparison;
-  });
+  const hasActiveFilters =
+    Boolean(debouncedSearchTerm) ||
+    statusFilter !== "all" ||
+    departmentFilter !== "all";
 
   // Get status badge color
   const getStatusColor = (status: string) => {
@@ -382,27 +399,56 @@ export default function EquipmentPage() {
       sonnerToast.error("Select at least one column to export.");
       return;
     }
-    if (sortedEquipmentData.length === 0) {
+
+    const recordCount =
+      exportScope === "page" ? sortedEquipmentData.length : totalItems;
+
+    if (recordCount === 0) {
       sonnerToast.error("No equipment data to export.");
       return;
     }
 
     setIsExporting(true);
     try {
+      let dataToExport: Equipment[];
+
+      if (exportScope === "page") {
+        dataToExport = sortedEquipmentData;
+      } else {
+        const response = await api.equipment.list({
+          search: debouncedSearchTerm || undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+          department:
+            departmentFilter !== "all" ? Number(departmentFilter) : undefined,
+          page: 1,
+          limit: totalItems,
+        });
+        dataToExport = sortEquipmentList(
+          response?.data || [],
+          sortColumn,
+          sortDirection
+        );
+      }
+
+      if (dataToExport.length === 0) {
+        sonnerToast.error("No equipment data to export.");
+        return;
+      }
+
       await exportEquipment(
         exportFormat,
-        sortedEquipmentData,
+        dataToExport,
         reportColumns,
         "equipment-inventory",
         {
           generatedOn: new Date().toLocaleDateString(),
-          totalCount: sortedEquipmentData.length,
+          totalCount: dataToExport.length,
         }
       );
       setIsExportDialogOpen(false);
       sonnerToast.success(
-        `Exported ${sortedEquipmentData.length} equipment record${
-          sortedEquipmentData.length === 1 ? "" : "s"
+        `Exported ${dataToExport.length} equipment record${
+          dataToExport.length === 1 ? "" : "s"
         } as ${exportFormat.toUpperCase()}`
       );
     } catch {
@@ -1000,11 +1046,56 @@ export default function EquipmentPage() {
           <DialogHeader>
             <DialogTitle>Export Equipment</DialogTitle>
             <DialogDescription>
-              Choose a file format and columns for the current page (
-              {sortedEquipmentData.length} record
-              {sortedEquipmentData.length === 1 ? "" : "s"}).
+              Choose what to export, file format, and columns.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Export scope</Label>
+            <RadioGroup
+              value={exportScope}
+              onValueChange={(value) => setExportScope(value as ExportScope)}
+              className="grid gap-2"
+            >
+              <div className="flex items-center space-x-2 rounded-md border p-3">
+                <RadioGroupItem value="page" id="export-scope-page" />
+                <Label
+                  htmlFor="export-scope-page"
+                  className="flex flex-1 cursor-pointer flex-col gap-0.5 font-normal"
+                >
+                  <span className="flex items-center gap-2">
+                    <List className="h-4 w-4 text-muted-foreground" />
+                    Current page
+                  </span>
+                  <span className="text-xs text-muted-foreground pl-6">
+                    Page {currentPage} — {sortedEquipmentData.length} record
+                    {sortedEquipmentData.length === 1 ? "" : "s"} (includes
+                    table sort)
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 rounded-md border p-3">
+                <RadioGroupItem value="filtered" id="export-scope-filtered" />
+                <Label
+                  htmlFor="export-scope-filtered"
+                  className="flex flex-1 cursor-pointer flex-col gap-0.5 font-normal"
+                >
+                  <span className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    {hasActiveFilters
+                      ? "All matching search & filters"
+                      : "All equipment"}
+                  </span>
+                  <span className="text-xs text-muted-foreground pl-6">
+                    {totalItems} record{totalItems === 1 ? "" : "s"}
+                    {hasActiveFilters
+                      ? " across all pages with current filters"
+                      : " in the system"}
+                  </span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
 
           <div className="space-y-3">
             <Label className="text-sm font-medium">File format</Label>

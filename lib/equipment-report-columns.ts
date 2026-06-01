@@ -50,7 +50,10 @@ export const EQUIPMENT_REPORT_COLUMN_DEFS: ReportColumnDef[] = [
   {
     key: "tagNumber",
     label: "Tag Number",
-    getValue: (e) => e.tag_number || "Not Set",
+    getValue: (e) =>
+      e.tag_number ||
+      (e as Equipment & { tagNumber?: string }).tagNumber ||
+      "Not Set",
   },
   {
     key: "manufacturer",
