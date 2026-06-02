@@ -59,6 +59,7 @@ import {
   Loader,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Equipment } from "@/types/equipment";
@@ -77,6 +78,7 @@ export default function EquipmentDetailPage({
 }) {
   const { id } = use(params);
   const equipmentId = parseInt(id);
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -105,10 +107,20 @@ export default function EquipmentDetailPage({
   const [deletedSpecIds, setDeletedSpecIds] = useState<Set<number>>(new Set());
 
   // Fetch equipment details
-  const { data: equipment, isLoading } = useQuery<Equipment>({
+  const { data: equipment, isLoading, isError } = useQuery<Equipment>({
     queryKey: ["equipment", equipmentId],
     queryFn: () => api.equipment.getById(equipmentId),
+    retry: false,
   });
+
+  useEffect(() => {
+    if (!isError) return;
+    queryClient.removeQueries({ queryKey: ["equipment", equipmentId] });
+    sonnerToast.info("Equipment not found", {
+      description: "It may have been deleted. Returning to the list.",
+    });
+    router.replace("/equipment");
+  }, [isError, equipmentId, queryClient, router]);
 
   // Fetch departments
   const { data: departments = [] } = useQuery<Department[]>({

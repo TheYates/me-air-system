@@ -177,10 +177,20 @@ export const api = {
       }
       return response.json();
     },
-    delete: (id: number) =>
-      fetchApi(`/equipment/${id}`, {
+    delete: async (id: number) => {
+      const response = await fetch(`${API_URL}/equipment/${id}`, {
         method: "DELETE",
-      }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (response.status === 404) {
+        return { success: true, alreadyDeleted: true };
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete equipment");
+      }
+      return data;
+    },
     updateStatus: (id: number, status: string) =>
       fetchApi(`/equipment/${id}/status`, {
         method: "PATCH",

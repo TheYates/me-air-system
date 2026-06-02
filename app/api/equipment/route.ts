@@ -177,6 +177,25 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    const seqCheck = await db.execute(sql`
+      SELECT
+        (SELECT COALESCE(MAX(id), 0) FROM equipment) AS max_id,
+        (SELECT last_value FROM equipment_id_seq) AS seq_last_value
+    `);
+    const seqRow = (seqCheck as unknown[])[0] as {
+      max_id: number;
+      seq_last_value: number;
+    };
+    if (Number(seqRow.seq_last_value) < Number(seqRow.max_id)) {
+      await db.execute(sql`
+        SELECT setval(
+          'equipment_id_seq',
+          COALESCE((SELECT MAX(id) FROM equipment), 1),
+          true
+        )
+      `);
+    }
+
     const newEquipment = await db
       .insert(equipment)
       .values({
@@ -287,10 +306,7 @@ export async function DELETE(request: Request) {
       .returning();
 
     if (deletedEquipment.length === 0) {
-      return NextResponse.json(
-        { error: "Equipment not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: true, alreadyDeleted: true });
     }
 
     return NextResponse.json({ success: true, deleted: deletedEquipment[0] });

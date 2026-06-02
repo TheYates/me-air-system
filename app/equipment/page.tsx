@@ -306,6 +306,10 @@ export default function EquipmentPage() {
       // Make the API call
       await api.equipment.delete(equipmentToDelete.id);
 
+      queryClient.removeQueries({
+        queryKey: ["equipment", equipmentToDelete.id],
+      });
+
       // Invalidate all equipment queries
       queryClient.invalidateQueries({
         queryKey: ["equipment"],

@@ -117,13 +117,10 @@ export async function DELETE(
       .returning();
 
     if (result.length === 0) {
-      return NextResponse.json(
-        { error: "Equipment not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: true, alreadyDeleted: true });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deleted: result[0] });
   } catch (error) {
     console.error("Error deleting equipment:", error);
     return NextResponse.json(
