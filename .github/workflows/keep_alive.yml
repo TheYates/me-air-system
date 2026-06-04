@@ -2,8 +2,8 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # Run at midnight (0 0 * *) on Sunday (0) and Friday(5)
-    - cron: '0 0 * * 0,5'
+    # Run at midnight UTC on Wednesday (3) and Saturday (6)
+    - cron: '0 0 * * 3,6'
   workflow_dispatch:
 
 jobs:
@@ -12,6 +12,11 @@ jobs:
     steps:
       - name: Ping Supabase Database
         run: |
-          curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/activities?select=id&limit=1" \
-          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"
+          curl -f -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/activities?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"
+
+      - name: Ping App Database Route
+        run: |
+          curl -f -X GET "${{ secrets.APP_URL }}/api/cron/db-ping" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
