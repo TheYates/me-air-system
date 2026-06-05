@@ -11,7 +11,10 @@ import {
   Settings,
   ChevronDown,
   FileText,
+  Lock,
+  Unlock,
 } from "lucide-react";
+import { useEditAuth } from "@/components/edit-auth-provider";
 import {
   Sidebar,
   SidebarContent,
@@ -41,8 +44,29 @@ const navigationItems = [
   { href: "/reports", label: "Reports", icon: FileText },
 ];
 
+function formatCountdown(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function getEditAccessLabel(
+  isUnlocked: boolean,
+  secondsRemaining: number | null
+) {
+  if (!isUnlocked) return "Locked — view only";
+  if (secondsRemaining !== null && secondsRemaining <= 60) {
+    return `Locks in ${formatCountdown(secondsRemaining)}`;
+  }
+  return "Unlocked — editing enabled";
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const { isUnlocked, secondsRemaining, openPinDialog, lock } = useEditAuth();
+  const editAccessLabel = getEditAccessLabel(isUnlocked, secondsRemaining);
+  const showCountdown =
+    isUnlocked && secondsRemaining !== null && secondsRemaining <= 60;
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -104,15 +128,38 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
+                  tooltip={editAccessLabel}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium">
-                    JD
+                  <div
+                    className={`flex aspect-square size-8 items-center justify-center rounded-lg text-sm font-medium ${
+                      isUnlocked
+                        ? "bg-green-600 text-white"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {isUnlocked ? (
+                      <Unlock className="size-4" />
+                    ) : (
+                      <Lock className="size-4" />
+                    )}
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">John Doe</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      Administrator
+                    <span className="truncate font-semibold">
+                      {isUnlocked ? "Editing enabled" : "View only"}
+                    </span>
+                    <span
+                      className={`truncate text-xs ${
+                        showCountdown
+                          ? "font-medium text-amber-600 dark:text-amber-400"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {showCountdown
+                        ? `Locks in ${formatCountdown(secondsRemaining!)}`
+                        : isUnlocked
+                          ? "Unlocked"
+                          : "Locked"}
                     </span>
                   </div>
                   <ChevronDown className="ml-auto size-4" />
@@ -124,6 +171,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 align="end"
                 sideOffset={4}
               >
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (isUnlocked) {
+                      void lock();
+                    } else {
+                      openPinDialog();
+                    }
+                  }}
+                >
+                  {isUnlocked ? (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      <span>Lock editing</span>
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="mr-2 h-4 w-4" />
+                      <span>Unlock with PIN</span>
+                    </>
+                  )}
+                </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>

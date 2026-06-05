@@ -11,6 +11,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { EditAuthProvider } from "@/components/edit-auth-provider";
 
 const getPageName = (pathname: string): string => {
   if (pathname === "/") return "Dashboard";
@@ -22,6 +23,15 @@ const getPageName = (pathname: string): string => {
   if (pathname.startsWith("/settings")) return "Settings";
   return "Dashboard";
 };
+
+function AppHeader({ pageName }: { pageName: string }) {
+  return (
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+      <SidebarTrigger className="-ml-1" />
+      <span className="font-semibold">{pageName}</span>
+    </header>
+  );
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,18 +45,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <QueryProvider>
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-              <SidebarTrigger className="-ml-1" />
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{pageName}</span>
-              </div>
-            </header>
-            <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
-          </SidebarInset>
-        </SidebarProvider>
+        <EditAuthProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <AppHeader pageName={pageName} />
+              <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
+            </SidebarInset>
+          </SidebarProvider>
+        </EditAuthProvider>
         <Toaster />
       </QueryProvider>
     </ThemeProvider>

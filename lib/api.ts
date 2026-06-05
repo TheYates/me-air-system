@@ -2,6 +2,14 @@ import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
 
+type EditAuthHandler = () => Promise<boolean>;
+
+let editAuthHandler: EditAuthHandler | null = null;
+
+export function setEditAuthHandler(handler: EditAuthHandler | null) {
+  editAuthHandler = handler;
+}
+
 // Configure axios with base URL
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -17,33 +25,56 @@ function createSearchParams(params?: Record<string, any>): string {
   return searchParams.toString();
 }
 
-// Generic fetch function
-export async function fetchApi<T = any>(
+const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
+
+async function fetchWithAuth<T = any>(
   url: string,
-  options?: RequestInit
-): Promise<T> {
+  options?: RequestInit,
+  allowRetry = true
+): Promise<{ response: Response; data: T | null }> {
+  const method = (options?.method || "GET").toUpperCase();
   const response = await fetch(`${API_URL}${url}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,
     },
   });
 
-  // Check if the response is empty
   if (response.status === 204) {
-    return {} as T;
+    return { response, data: {} as T };
   }
 
-  const data = await response.json().catch(() => {
-    throw new Error("Failed to parse JSON response");
-  });
+  const data = await response.json().catch(() => null);
+
+  if (
+    response.status === 401 &&
+    allowRetry &&
+    MUTATION_METHODS.has(method) &&
+    editAuthHandler
+  ) {
+    const unlocked = await editAuthHandler();
+    if (unlocked) {
+      return fetchWithAuth<T>(url, options, false);
+    }
+  }
+
+  return { response, data };
+}
+
+// Generic fetch function
+export async function fetchApi<T = any>(
+  url: string,
+  options?: RequestInit
+): Promise<T> {
+  const { response, data } = await fetchWithAuth<T>(url, options);
 
   if (!response.ok) {
-    throw new Error(data.error || "API Error");
+    throw new Error((data as { error?: string } | null)?.error || "API Error");
   }
 
-  return data;
+  return (data ?? {}) as T;
 }
 
 export const api = {
@@ -119,18 +150,17 @@ export const api = {
         }
       });
 
-      const response = await fetch(`${API_URL}/equipment`, {
+      const { response, data: result } = await fetchWithAuth("/equipment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(jsonData),
       });
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create equipment");
+        throw new Error(
+          (result as { error?: string } | null)?.error ||
+            "Failed to create equipment"
+        );
       }
-      return response.json();
+      return result;
     },
     update: async (id: number, data: FormData) => {
       // Convert FormData to JSON object
@@ -164,32 +194,32 @@ export const api = {
         }
       });
 
-      const response = await fetch(`${API_URL}/equipment/${id}`, {
+      const { response, data: result } = await fetchWithAuth(`/equipment/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(jsonData),
       });
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update equipment");
+        throw new Error(
+          (result as { error?: string } | null)?.error ||
+            "Failed to update equipment"
+        );
       }
-      return response.json();
+      return result;
     },
     delete: async (id: number) => {
-      const response = await fetch(`${API_URL}/equipment/${id}`, {
+      const { response, data: result } = await fetchWithAuth(`/equipment/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
       });
       if (response.status === 404) {
         return { success: true, alreadyDeleted: true };
       }
-      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || "Failed to delete equipment");
+        throw new Error(
+          (result as { error?: string } | null)?.error ||
+            "Failed to delete equipment"
+        );
       }
-      return data;
+      return result ?? { success: true };
     },
     updateStatus: (id: number, status: string) =>
       fetchApi(`/equipment/${id}/status`, {
@@ -258,6 +288,36 @@ export const api = {
     upcoming: () => fetchApi("/maintenance?upcoming=true"),
 
     test: () => fetchApi("/maintenance/test"),
+
+    listNotes: (maintenanceId: number) =>
+      fetchApi(`/maintenance/${maintenanceId}/notes`),
+
+    createNote: (maintenanceId: number, data: { note: string; createdBy?: string }) =>
+      fetchApi(`/maintenance/${maintenanceId}/notes`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    listParts: (maintenanceId: number) =>
+      fetchApi(`/maintenance/${maintenanceId}/parts`),
+
+    createPart: (
+      maintenanceId: number,
+      data: {
+        partName: string;
+        partNumber?: string;
+        quantity?: number;
+        cost?: number;
+        supplier?: string;
+      }
+    ) =>
+      fetchApi(`/maintenance/${maintenanceId}/parts`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    listPhotos: (maintenanceId: number) =>
+      fetchApi(`/maintenance/${maintenanceId}/photos`),
   },
 
   maintenanceRequests: {
@@ -335,7 +395,7 @@ export const api = {
     ) =>
       fetchApi(`/maintenance/${maintenanceId}/checklist/${itemId}`, {
         method: "PUT",
-        body: JSON.stringify({ isCompleted }),
+        body: JSON.stringify({ isCompleted: isCompleted ? 1 : 0 }),
       }),
   },
 

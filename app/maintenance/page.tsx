@@ -57,7 +57,8 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { MaintenanceRecord } from "@/types/maintenance";
 import type { Equipment } from "@/types/equipment";
@@ -75,6 +76,19 @@ export default function MaintenancePage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const handleStatusChange = async (id: number, status: string) => {
+    try {
+      await api.maintenance.update(id, { status });
+      await queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+      toast.success(`Status updated to ${status.replace("-", " ")}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update status"
+      );
+    }
+  };
 
   // Fetch maintenance data
   const { data: maintenanceResponse, isLoading: isLoadingMaintenance } =
@@ -552,12 +566,24 @@ export default function MaintenancePage() {
                           </Button>
 
                           {maintenance.status === "scheduled" && (
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleStatusChange(maintenance.id, "in-progress")
+                              }
+                            >
                               Start
                             </Button>
                           )}
                           {maintenance.status === "in-progress" && (
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleStatusChange(maintenance.id, "completed")
+                              }
+                            >
                               Complete
                             </Button>
                           )}

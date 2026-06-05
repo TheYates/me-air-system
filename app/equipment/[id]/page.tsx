@@ -70,6 +70,7 @@ import { MaintenanceTimeline } from "@/components/maintenance-timeline";
 import { toast as sonnerToast } from "sonner";
 import { useToast } from "@/hooks/use-toast";
 import { AddEquipmentDialog } from "@/app/equipment/page";
+import { useEditAuth } from "@/components/edit-auth-provider";
 
 export default function EquipmentDetailPage({
   params,
@@ -81,6 +82,7 @@ export default function EquipmentDetailPage({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { requestUnlock } = useEditAuth();
 
   // Get URL parameters for return navigation
   const [returnTo, setReturnTo] = useState<string | null>(null);
@@ -152,7 +154,9 @@ export default function EquipmentDetailPage({
   }, [fetchedSpecifications.length]);
 
   // Initialize editing specs when dialog opens
-  const handleOpenEditDialog = () => {
+  const handleOpenEditDialog = async () => {
+    if (!(await requestUnlock())) return;
+
     // Create a copy of current specifications
     const currentSpecs = specifications.filter(
       (spec) => spec.specificationKey && spec.specificationKey.trim() !== ""
@@ -175,6 +179,7 @@ export default function EquipmentDetailPage({
   // Handle status update
   const handleStatusUpdate = async (newStatus: string) => {
     if (!equipment) return;
+    if (!(await requestUnlock())) return;
 
     try {
       // Optimistically update the cache
@@ -219,6 +224,7 @@ export default function EquipmentDetailPage({
 
   // Handle save specifications
   const handleSaveSpecifications = async () => {
+    if (!(await requestUnlock())) return;
     if (!equipment) return;
 
     try {
@@ -352,6 +358,10 @@ export default function EquipmentDetailPage({
                 variant="outline"
                 size="sm"
                 className="text-xs md:text-sm"
+                onClick={async () => {
+                  if (!(await requestUnlock())) return;
+                  sonnerToast.info("Export will be available in a future update.");
+                }}
               >
                 <Download className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">Export</span>
@@ -359,7 +369,9 @@ export default function EquipmentDetailPage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsEditDialogOpen(true)}
+                onClick={async () => {
+                  if (await requestUnlock()) setIsEditDialogOpen(true);
+                }}
                 className="text-xs md:text-sm"
               >
                 <Edit className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
@@ -983,7 +995,9 @@ export default function EquipmentDetailPage({
               <h3 className="text-lg font-semibold">Maintenance History</h3>
               <Button
                 size="sm"
-                onClick={() => setIsMaintenanceDialogOpen(true)}
+                onClick={async () => {
+                  if (await requestUnlock()) setIsMaintenanceDialogOpen(true);
+                }}
               >
                 <Wrench className="h-4 w-4 mr-2" />
                 Log Maintenance
@@ -1135,7 +1149,12 @@ export default function EquipmentDetailPage({
           <TabsContent value="documents" className="space-y-6">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Documents</h3>
-              <Button size="sm" onClick={() => setIsUploadDocDialogOpen(true)}>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  if (await requestUnlock()) setIsUploadDocDialogOpen(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Upload Document
               </Button>
@@ -1159,7 +1178,9 @@ export default function EquipmentDetailPage({
               <h3 className="text-lg font-semibold">Photos</h3>
               <Button
                 size="sm"
-                onClick={() => setIsUploadPhotoDialogOpen(true)}
+                onClick={async () => {
+                  if (await requestUnlock()) setIsUploadPhotoDialogOpen(true);
+                }}
               >
                 <Camera className="h-4 w-4 mr-2" />
                 Upload Photo

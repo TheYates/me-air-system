@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { maintenance } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { maintenance, equipment, departments } from "@/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 export async function GET(
   request: Request,
@@ -12,8 +12,31 @@ export async function GET(
     const maintenanceId = parseInt(id);
 
     const result = await db
-      .select()
+      .select({
+        id: maintenance.id,
+        equipmentId: maintenance.equipmentId,
+        type: maintenance.type,
+        description: maintenance.description,
+        technician: maintenance.technician,
+        date: maintenance.date,
+        scheduledDate: maintenance.scheduledDate,
+        completedDate: maintenance.completedDate,
+        cost: maintenance.cost,
+        status: maintenance.status,
+        notes: maintenance.notes,
+        priority: maintenance.priority,
+        progress: maintenance.progress,
+        estimatedDuration: maintenance.estimatedDuration,
+        actualDuration: maintenance.actualDuration,
+        createdAt: maintenance.createdAt,
+        updatedAt: maintenance.updatedAt,
+        equipment_name: sql<string | null>`${equipment.name}`,
+        tag_number: sql<string | null>`${equipment.tagNumber}`,
+        department: sql<string | null>`${departments.name}`,
+      })
       .from(maintenance)
+      .leftJoin(equipment, eq(maintenance.equipmentId, equipment.id))
+      .leftJoin(departments, eq(equipment.departmentId, departments.id))
       .where(eq(maintenance.id, maintenanceId))
       .limit(1);
 
@@ -48,16 +71,29 @@ export async function PUT(
     const result = await db
       .update(maintenance)
       .set({
-        maintenanceType: body.maintenanceType,
+        type: body.type ?? body.maintenanceType,
         description: body.description,
-        performedBy: body.performedBy,
-        performedDate: body.performedDate ? new Date(body.performedDate) : undefined,
-        nextMaintenanceDate: body.nextMaintenanceDate
-          ? new Date(body.nextMaintenanceDate)
+        technician: body.technician ?? body.performedBy,
+        date: body.date
+          ? new Date(body.date)
+          : body.performedDate
+            ? new Date(body.performedDate)
+            : undefined,
+        scheduledDate: body.scheduledDate
+          ? new Date(body.scheduledDate)
           : undefined,
+        completedDate: body.completedDate
+          ? new Date(body.completedDate)
+          : body.status === "completed"
+            ? new Date()
+            : undefined,
         cost: body.cost,
         status: body.status,
         notes: body.notes,
+        priority: body.priority,
+        progress: body.progress,
+        estimatedDuration: body.estimatedDuration,
+        actualDuration: body.actualDuration,
         updatedAt: new Date(),
       })
       .where(eq(maintenance.id, maintenanceId))

@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { use } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useEditAuth } from "@/components/edit-auth-provider";
 import { toast as sonnerToast } from "sonner";
 import type { Department } from "@/types/department";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -294,6 +295,7 @@ export default function DepartmentDetailPage({
   const { id } = use(params);
   const departmentId = parseInt(id);
   const queryClient = useQueryClient();
+  const { requestUnlock } = useEditAuth();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddSubUnitDialogOpen, setIsAddSubUnitDialogOpen] = useState(false);
@@ -451,20 +453,23 @@ export default function DepartmentDetailPage({
   const currentEquipment = filteredEquipment.slice(startIndex, endIndex);
 
   // Note: Sub-unit management would be handled through the backend API
-  const handleAddSubUnit = (newSubUnit: any) => {
+  const handleAddSubUnit = async (newSubUnit: any) => {
+    if (!(await requestUnlock())) return;
     // TODO: Call API to add sub-unit to department
     console.log("Add sub-unit:", newSubUnit);
     setIsAddSubUnitDialogOpen(false);
   };
 
-  const handleEditSubUnit = (updatedSubUnit: any) => {
+  const handleEditSubUnit = async (updatedSubUnit: any) => {
+    if (!(await requestUnlock())) return;
     // TODO: Call API to update sub-unit
     console.log("Edit sub-unit:", updatedSubUnit);
     setIsEditSubUnitDialogOpen(false);
     setSelectedSubUnit(null);
   };
 
-  const handleDeleteSubUnit = (subUnitId: string) => {
+  const handleDeleteSubUnit = async (subUnitId: string) => {
+    if (!(await requestUnlock())) return;
     // TODO: Call API to delete sub-unit
     console.log("Delete sub-unit:", subUnitId);
   };
@@ -505,7 +510,9 @@ export default function DepartmentDetailPage({
   };
 
   // Print function for equipment table
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (!(await requestUnlock())) return;
+
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -585,7 +592,9 @@ export default function DepartmentDetailPage({
   };
 
   // Export to CSV function
-  const handleExport = () => {
+  const handleExport = async () => {
+    if (!(await requestUnlock())) return;
+
     const headers = [
       "#",
       "Name",
@@ -636,6 +645,8 @@ export default function DepartmentDetailPage({
 
   // Quick status update function
   const handleStatusUpdate = async (equipmentId: number, newStatus: string) => {
+    if (!(await requestUnlock())) return;
+
     try {
       // Optimistically update the local cache
       const currentQueryKey = ["department-equipment", departmentId];
@@ -1069,7 +1080,9 @@ export default function DepartmentDetailPage({
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => setIsAddSubUnitDialogOpen(true)}
+                    onClick={async () => {
+                      if (await requestUnlock()) setIsAddSubUnitDialogOpen(true);
+                    }}
                     className="shadow-sm"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -1179,7 +1192,11 @@ export default function DepartmentDetailPage({
                       Start organizing your department by creating sub-units.
                       This helps manage equipment and staff more effectively.
                     </p>
-                    <Button onClick={() => setIsAddSubUnitDialogOpen(true)}>
+                    <Button
+                      onClick={async () => {
+                        if (await requestUnlock()) setIsAddSubUnitDialogOpen(true);
+                      }}
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Create First Sub-unit
                     </Button>

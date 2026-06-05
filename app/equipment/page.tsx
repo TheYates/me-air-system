@@ -99,6 +99,7 @@ import {
   type ExportScope,
 } from "@/lib/equipment-export";
 import { EquipmentReportColumnPicker } from "@/components/equipment-report-column-picker";
+import { useEditAuth } from "@/components/edit-auth-provider";
 
 function sortEquipmentList(
   data: Equipment[],
@@ -147,6 +148,7 @@ export default function EquipmentPage() {
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { requestUnlock } = useEditAuth();
   const { toast } = useToast();
 
   // Debounce search input to reduce API calls
@@ -214,6 +216,8 @@ export default function EquipmentPage() {
 
   // Quick status update
   const handleStatusUpdate = async (equipmentId: number, newStatus: string) => {
+    if (!(await requestUnlock())) return;
+
     try {
       // Optimistically update the local cache
       const currentQueryKey = queryKeys.list({
@@ -270,10 +274,11 @@ export default function EquipmentPage() {
   };
 
   // Open delete confirmation dialog
-  const handleOpenDeleteDialog = (
+  const handleOpenDeleteDialog = async (
     equipmentId: number,
     equipmentName: string
   ) => {
+    if (!(await requestUnlock())) return;
     setEquipmentToDelete({ id: equipmentId, name: equipmentName });
     setIsDeleteDialogOpen(true);
   };
@@ -390,15 +395,19 @@ export default function EquipmentPage() {
   };
 
   // Open print dialog
-  const handlePrintClick = () => {
+  const handlePrintClick = async () => {
+    if (!(await requestUnlock())) return;
     setIsPrintDialogOpen(true);
   };
 
-  const handleExportClick = () => {
+  const handleExportClick = async () => {
+    if (!(await requestUnlock())) return;
     setIsExportDialogOpen(true);
   };
 
   const handleExport = async () => {
+    if (!(await requestUnlock())) return;
+
     if (!hasSelectedColumns(reportColumns)) {
       sonnerToast.error("Select at least one column to export.");
       return;
@@ -463,7 +472,9 @@ export default function EquipmentPage() {
   };
 
   // Print functionality with selected columns
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (!(await requestUnlock())) return;
+
     if (!hasSelectedColumns(reportColumns)) {
       sonnerToast.error("Select at least one column to print");
       return;
@@ -574,7 +585,9 @@ export default function EquipmentPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => setIsAddDialogOpen(true)}
+                onClick={async () => {
+                  if (await requestUnlock()) setIsAddDialogOpen(true);
+                }}
                 className="text-xs flex-1 sm:flex-none"
               >
                 <Plus className="h-4 w-4 sm:mr-2" />
@@ -584,7 +597,9 @@ export default function EquipmentPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsBulkAddDialogOpen(true)}
+                onClick={async () => {
+                  if (await requestUnlock()) setIsBulkAddDialogOpen(true);
+                }}
                 className="text-xs w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -1222,6 +1237,7 @@ export function AddEquipmentDialog({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!editingEquipment;
+  const { requestUnlock } = useEditAuth();
 
   const handleFormChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -1240,6 +1256,8 @@ export function AddEquipmentDialog({
   };
 
   const handleSubmit = async () => {
+    if (!(await requestUnlock())) return;
+
     setIsSubmitting(true);
     try {
       // Create FormData
@@ -1863,6 +1881,7 @@ function BulkAddEquipmentDialog({
     },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { requestUnlock } = useEditAuth();
 
   const addExcelRow = () => {
     const newRow = {
@@ -1907,6 +1926,8 @@ function BulkAddEquipmentDialog({
   };
 
   const handleExcelSubmit = async () => {
+    if (!(await requestUnlock())) return;
+
     setIsSubmitting(true);
     try {
       // Submit each row
