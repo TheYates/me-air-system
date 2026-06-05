@@ -26,7 +26,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -49,6 +60,7 @@ import {
   CalendarIcon,
   Edit,
   Eye,
+  Trash2,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -82,11 +94,61 @@ export default function MaintenancePage() {
     try {
       await api.maintenance.update(id, { status });
       await queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+      await queryClient.invalidateQueries({ queryKey: ["maintenance", id] });
+      await queryClient.invalidateQueries({ queryKey: ["maintenanceHistory"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["maintenanceRequests"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["upcomingMaintenance"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["healthStats"] });
       toast.success(`Status updated to ${status.replace("-", " ")}`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update status"
+        error instanceof Error ? error.message : "Failed to update status",
       );
+    }
+  };
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [maintenanceToDelete, setMaintenanceToDelete] =
+    useState<MaintenanceRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = (maintenance: MaintenanceRecord) => {
+    setMaintenanceToDelete(maintenance);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!maintenanceToDelete) return;
+    setIsDeleting(true);
+    try {
+      await api.maintenance.delete(maintenanceToDelete.id);
+      await queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["maintenance", maintenanceToDelete.id],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["maintenanceHistory"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["maintenanceRequests"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["upcomingMaintenance"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["healthStats"] });
+      toast.success("Maintenance record deleted");
+      setIsDeleteDialogOpen(false);
+      setMaintenanceToDelete(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete maintenance record",
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -127,7 +189,7 @@ export default function MaintenancePage() {
           .includes(searchTerm.toLowerCase());
 
       return matchesSearch;
-    }
+    },
   );
 
   // Handle column sorting
@@ -172,16 +234,16 @@ export default function MaintenancePage() {
   // Calculate stats
   const stats = {
     scheduled: maintenanceData.filter(
-      (m: MaintenanceRecord) => m.status === "scheduled"
+      (m: MaintenanceRecord) => m.status === "scheduled",
     ).length,
     inProgress: maintenanceData.filter(
-      (m: MaintenanceRecord) => m.status === "in-progress"
+      (m: MaintenanceRecord) => m.status === "in-progress",
     ).length,
     completed: maintenanceData.filter(
-      (m: MaintenanceRecord) => m.status === "completed"
+      (m: MaintenanceRecord) => m.status === "completed",
     ).length,
     cancelled: maintenanceData.filter(
-      (m: MaintenanceRecord) => m.status === "cancelled"
+      (m: MaintenanceRecord) => m.status === "cancelled",
     ).length,
   };
 
@@ -502,7 +564,7 @@ export default function MaintenancePage() {
                           {getStatusIcon(maintenance.status || "unknown")}
                           <Badge
                             className={getStatusColor(
-                              maintenance.status || "unknown"
+                              maintenance.status || "unknown",
                             )}
                           >
                             {maintenance.status
@@ -515,7 +577,7 @@ export default function MaintenancePage() {
                       <TableCell>
                         <Badge
                           className={getPriorityColor(
-                            maintenance.priority || "medium"
+                            maintenance.priority || "medium",
                           )}
                         >
                           {maintenance.priority
@@ -538,7 +600,7 @@ export default function MaintenancePage() {
                                 year: "numeric",
                                 month: "short",
                                 day: "numeric",
-                              }
+                              },
                             )
                           : "N/A"}
                       </TableCell>
@@ -565,12 +627,23 @@ export default function MaintenancePage() {
                             <Eye className="h-4 w-4" />
                           </Button>
 
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(maintenance)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+
                           {maintenance.status === "scheduled" && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                handleStatusChange(maintenance.id, "in-progress")
+                                handleStatusChange(
+                                  maintenance.id,
+                                  "in-progress",
+                                )
                               }
                             >
                               Start
@@ -642,7 +715,7 @@ export default function MaintenancePage() {
                   <TableRow>
                     <TableCell
                       colSpan={9}
-                      className="text-center py-10 text-gray-500"
+                      className="text-center py-10 text-gray-500 dark:text-gray-400"
                     >
                       No maintenance tasks found
                     </TableCell>
@@ -652,6 +725,47 @@ export default function MaintenancePage() {
             </Table>
           </CardContent>
         </Card>
+
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete maintenance record</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete{" "}
+                {maintenanceToDelete
+                  ? `MT-${maintenanceToDelete.id
+                      .toString()
+                      .padStart(3, "0")} - ${
+                      maintenanceToDelete.equipment_name || "this record"
+                    }`
+                  : "this record"}{" "}
+                ? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

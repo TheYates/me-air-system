@@ -109,7 +109,11 @@ export default function EquipmentDetailPage({
   const [deletedSpecIds, setDeletedSpecIds] = useState<Set<number>>(new Set());
 
   // Fetch equipment details
-  const { data: equipment, isLoading, isError } = useQuery<Equipment>({
+  const {
+    data: equipment,
+    isLoading,
+    isError,
+  } = useQuery<Equipment>({
     queryKey: ["equipment", equipmentId],
     queryFn: () => api.equipment.getById(equipmentId),
     retry: false,
@@ -148,7 +152,10 @@ export default function EquipmentDetailPage({
   useEffect(() => {
     if (fetchedSpecifications.length > 0) {
       setSpecifications(fetchedSpecifications);
-    } else if (fetchedSpecifications.length === 0 && specifications.length === 0) {
+    } else if (
+      fetchedSpecifications.length === 0 &&
+      specifications.length === 0
+    ) {
       setSpecifications([{ specificationKey: "", specificationValue: "" }]);
     }
   }, [fetchedSpecifications.length]);
@@ -159,18 +166,18 @@ export default function EquipmentDetailPage({
 
     // Create a copy of current specifications
     const currentSpecs = specifications.filter(
-      (spec) => spec.specificationKey && spec.specificationKey.trim() !== ""
+      (spec) => spec.specificationKey && spec.specificationKey.trim() !== "",
     );
-    
+
     // Ensure we have at least 3 rows
     const rowsToShow = Math.max(3, currentSpecs.length);
     const initialRows = [...currentSpecs];
-    
+
     // Fill with empty rows to reach 3 minimum
     for (let i = currentSpecs.length; i < rowsToShow; i++) {
       initialRows.push({ specificationKey: "", specificationValue: "" });
     }
-    
+
     setEditingSpecs(initialRows);
     setDeletedSpecIds(new Set());
     setIsEditSpecsDialogOpen(true);
@@ -203,7 +210,7 @@ export default function EquipmentDetailPage({
         {
           description: "Equipment status has been successfully changed",
           duration: 3000,
-        }
+        },
       );
       setIsStatusMenuOpen(false);
     } catch (error) {
@@ -231,14 +238,12 @@ export default function EquipmentDetailPage({
       setIsSavingSpecs(true);
 
       // Filter out empty specifications and those marked for deletion
-      const validSpecs = editingSpecs.filter(
-        (spec, index) => {
-          // Skip if marked for deletion
-          if (deletedSpecIds.has(index)) return false;
-          // Skip if both key and value are empty
-          return spec.specificationKey && spec.specificationKey.trim() !== "";
-        }
-      );
+      const validSpecs = editingSpecs.filter((spec, index) => {
+        // Skip if marked for deletion
+        if (deletedSpecIds.has(index)) return false;
+        // Skip if both key and value are empty
+        return spec.specificationKey && spec.specificationKey.trim() !== "";
+      });
 
       await api.equipment.saveSpecifications(equipmentId, validSpecs);
 
@@ -324,7 +329,7 @@ export default function EquipmentDetailPage({
 
   // Find upcoming maintenance
   const upcomingMaintenance = maintenanceRecords.find(
-    (record) => record.status === "scheduled"
+    (record) => record.status === "scheduled",
   );
 
   return (
@@ -360,7 +365,9 @@ export default function EquipmentDetailPage({
                 className="text-xs md:text-sm"
                 onClick={async () => {
                   if (!(await requestUnlock())) return;
-                  sonnerToast.info("Export will be available in a future update.");
+                  sonnerToast.info(
+                    "Export will be available in a future update.",
+                  );
                 }}
               >
                 <Download className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
@@ -398,7 +405,7 @@ export default function EquipmentDetailPage({
                 <DropdownMenuTrigger asChild>
                   <Badge
                     className={`${getStatusColor(
-                      equipment.status || "unknown"
+                      equipment.status || "unknown",
                     )} cursor-pointer hover:opacity-80`}
                   >
                     {equipment.status
@@ -439,7 +446,7 @@ export default function EquipmentDetailPage({
                           </span>
                         </DropdownMenuItem>
                       );
-                    }
+                    },
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -783,7 +790,7 @@ export default function EquipmentDetailPage({
                       <p className="font-medium">
                         {equipment.date_of_installation ? (
                           new Date(
-                            equipment.date_of_installation
+                            equipment.date_of_installation,
                           ).toLocaleDateString()
                         ) : (
                           <span className="text-gray-400 italic">
@@ -799,7 +806,7 @@ export default function EquipmentDetailPage({
                       <p className="font-medium">
                         {equipment.purchase_cost ? (
                           `GHS ${Number(
-                            equipment.purchase_cost
+                            equipment.purchase_cost,
                           ).toLocaleString()}`
                         ) : (
                           <span className="text-gray-400 italic">
@@ -877,7 +884,8 @@ export default function EquipmentDetailPage({
                 {specifications.length > 0 &&
                 specifications.some(
                   (spec) =>
-                    spec.specificationKey && spec.specificationKey.trim() !== ""
+                    spec.specificationKey &&
+                    spec.specificationKey.trim() !== "",
                 ) ? (
                   <div className="space-y-4">
                     {specifications.map((spec, index) => (
@@ -1034,7 +1042,7 @@ export default function EquipmentDetailPage({
                       <p className="text-sm text-gray-600">
                         Scheduled for{" "}
                         {new Date(
-                          upcomingMaintenance.date
+                          upcomingMaintenance.date,
                         ).toLocaleDateString()}
                         {upcomingMaintenance.technician &&
                           ` • ${upcomingMaintenance.technician}`}
@@ -1103,7 +1111,7 @@ export default function EquipmentDetailPage({
                               <TableCell>
                                 {record.cost
                                   ? `GHS ${Number(
-                                      record.cost
+                                      record.cost,
                                     ).toLocaleString()}`
                                   : "Not Set"}
                               </TableCell>
@@ -1113,8 +1121,8 @@ export default function EquipmentDetailPage({
                                     record.status === "completed"
                                       ? "bg-green-100 text-green-800"
                                       : record.status === "in-progress"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-blue-100 text-blue-800"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : "bg-blue-100 text-blue-800"
                                   }
                                 >
                                   {record.status
@@ -1133,7 +1141,7 @@ export default function EquipmentDetailPage({
                         </TableBody>
                       </Table>
                     ) : (
-                      <div className="text-center py-10 text-gray-600">
+                      <div className="text-center py-10 text-gray-600 dark:text-gray-400">
                         <Wrench className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                         <p>No maintenance records found</p>
                         <p className="text-sm mt-2">
@@ -1162,7 +1170,7 @@ export default function EquipmentDetailPage({
 
             <Card>
               <CardContent className="pt-6">
-                <div className="text-center py-10 text-gray-600">
+                <div className="text-center py-10 text-gray-600 dark:text-gray-400">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                   <p>No documents available</p>
                   <p className="text-sm mt-2">
@@ -1254,7 +1262,7 @@ export default function EquipmentDetailPage({
                         <p className="font-medium">Equipment Installed</p>
                         <p className="text-sm text-gray-600">
                           {new Date(
-                            equipment.date_of_installation
+                            equipment.date_of_installation,
                           ).toLocaleDateString()}{" "}
                           • Installation Team
                         </p>
@@ -1271,7 +1279,7 @@ export default function EquipmentDetailPage({
                         <p className="font-medium">Equipment Purchased</p>
                         <p className="text-sm text-gray-600">
                           {new Date(
-                            equipment.purchase_date
+                            equipment.purchase_date,
                           ).toLocaleDateString()}{" "}
                           • Procurement
                         </p>
@@ -1283,7 +1291,7 @@ export default function EquipmentDetailPage({
                             }`}
                           {equipment.purchase_cost &&
                             ` • Cost: GHS ${Number(
-                              equipment.purchase_cost
+                              equipment.purchase_cost,
                             ).toLocaleString()}`}
                         </p>
                       </div>
@@ -1319,7 +1327,7 @@ export default function EquipmentDetailPage({
                         <p className="font-medium">Last Service</p>
                         <p className="text-sm text-gray-600">
                           {new Date(
-                            equipment.last_service_date
+                            equipment.last_service_date,
                           ).toLocaleDateString()}{" "}
                           • Service Team
                         </p>
@@ -1394,7 +1402,7 @@ export default function EquipmentDetailPage({
                   setUploadingDoc(false);
                   setIsUploadDocDialogOpen(false);
                   alert(
-                    "Document upload feature will be fully implemented soon!"
+                    "Document upload feature will be fully implemented soon!",
                   );
                 }, 1000);
               }}
@@ -1434,7 +1442,7 @@ export default function EquipmentDetailPage({
                     const reader = new FileReader();
                     reader.onload = (event) => {
                       const preview = document.getElementById(
-                        "photoPreview"
+                        "photoPreview",
                       ) as HTMLImageElement;
                       if (preview && event.target?.result) {
                         preview.src = event.target.result as string;
@@ -1510,8 +1518,12 @@ export default function EquipmentDetailPage({
                 <TableHeader className="sticky top-0 bg-white dark:bg-gray-950 z-10">
                   <TableRow className="h-9">
                     <TableHead className="w-[40px] py-2 text-xs">#</TableHead>
-                    <TableHead className="w-[40%] py-2 text-xs">Specification Key</TableHead>
-                    <TableHead className="w-[40%] py-2 text-xs">Value</TableHead>
+                    <TableHead className="w-[40%] py-2 text-xs">
+                      Specification Key
+                    </TableHead>
+                    <TableHead className="w-[40%] py-2 text-xs">
+                      Value
+                    </TableHead>
                     <TableHead className="w-[80px] text-center py-2 text-xs">
                       Action
                     </TableHead>

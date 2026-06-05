@@ -53,10 +53,12 @@ export function MaintenanceTimeline({
   if (!records || records.length === 0) {
     return (
       <Card className="p-6">
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           <Wrench className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p>No maintenance records yet</p>
-          <p className="text-sm">Start logging maintenance activities</p>
+          <p className="text-sm dark:text-gray-400">
+            Start logging maintenance activities
+          </p>
         </div>
       </Card>
     );
@@ -133,7 +135,8 @@ export function MaintenanceTimeline({
               {record.nextMaintenanceDate && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 bg-yellow-50 p-2 rounded">
                   <Clock className="h-4 w-4" />
-                  Next maintenance: {new Date(record.nextMaintenanceDate).toLocaleDateString()}
+                  Next maintenance:{" "}
+                  {new Date(record.nextMaintenanceDate).toLocaleDateString()}
                 </div>
               )}
             </div>
@@ -143,4 +146,3 @@ export function MaintenanceTimeline({
     </div>
   );
 }
-

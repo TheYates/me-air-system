@@ -335,7 +335,8 @@ export default function DepartmentDetailPage({
   // Fetch equipment for this department
   const { data: equipmentResponse, isLoading: isEquipmentLoading } = useQuery({
     queryKey: ["department-equipment", departmentId],
-    queryFn: () => api.equipment.list({ department: departmentId, limit: 1000 }),
+    queryFn: () =>
+      api.equipment.list({ department: departmentId, limit: 1000 }),
     enabled: !!departmentId,
   });
 
@@ -351,7 +352,7 @@ export default function DepartmentDetailPage({
   const maintenanceData = maintenanceResponse?.data || [];
 
   const departmentMaintenance = maintenanceData.filter((m: any) =>
-    allEquipment.some((eq: any) => eq.id === m.equipmentId)
+    allEquipment.some((eq: any) => eq.id === m.equipmentId),
   );
 
   // Generate sub-units from actual equipment data
@@ -370,7 +371,7 @@ export default function DepartmentDetailPage({
       name: subUnitName,
       description: "",
       equipmentCount: allEquipment.filter(
-        (eq: any) => eq.sub_unit === subUnitName
+        (eq: any) => eq.sub_unit === subUnitName,
       ).length,
     }));
   }, [allEquipment]);
@@ -408,7 +409,7 @@ export default function DepartmentDetailPage({
       eq.id.toString().includes(equipmentSearchTerm) ||
       (eq.subUnit || "")
         .toLowerCase()
-        .includes(equipmentSearchTerm.toLowerCase())
+        .includes(equipmentSearchTerm.toLowerCase()),
   );
 
   // Apply sorting
@@ -564,20 +565,20 @@ export default function DepartmentDetailPage({
                   <td>${
                     equipment.last_service_date
                       ? new Date(
-                          equipment.last_service_date
+                          equipment.last_service_date,
                         ).toLocaleDateString()
                       : "Not Set"
                   }</td>
                   <td>${
                     equipment.next_maintenance_date
                       ? new Date(
-                          equipment.next_maintenance_date
+                          equipment.next_maintenance_date,
                         ).toLocaleDateString()
                       : "Not Set"
                   }</td>
                   <td>${(equipment.purchase_cost || 0).toLocaleString()}</td>
                 </tr>
-              `
+              `,
                 )
                 .join("")}
             </tbody>
@@ -623,7 +624,7 @@ export default function DepartmentDetailPage({
               : "Not Set"
           }"`,
           equipment.purchase_cost || 0,
-        ].join(",")
+        ].join(","),
       ),
     ].join("\n");
 
@@ -635,7 +636,7 @@ export default function DepartmentDetailPage({
       "download",
       `equipment-list-${department?.name?.replace(/\s+/g, "-")}-${
         new Date().toISOString().split("T")[0]
-      }.csv`
+      }.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -657,7 +658,7 @@ export default function DepartmentDetailPage({
         queryClient.setQueryData(currentQueryKey, {
           ...previousData,
           data: previousData.data.map((item: any) =>
-            item.id === equipmentId ? { ...item, status: newStatus } : item
+            item.id === equipmentId ? { ...item, status: newStatus } : item,
           ),
         });
       }
@@ -672,7 +673,7 @@ export default function DepartmentDetailPage({
           data: previousData.data.map((item: any) =>
             item.id === equipmentId
               ? { ...item, status: response.status }
-              : item
+              : item,
           ),
         });
       }
@@ -687,7 +688,7 @@ export default function DepartmentDetailPage({
         {
           description: "Equipment status has been successfully changed",
           duration: 3000,
-        }
+        },
       );
     } catch (error) {
       // Revert the optimistic update on error
@@ -744,948 +745,933 @@ export default function DepartmentDetailPage({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <Link href="/departments">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Departments
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <Dialog
-                  open={isEditDialogOpen}
-                  onOpenChange={setIsEditDialogOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Department
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>
-                        Edit Department - {department.name}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Department Name</Label>
-                        <Input id="name" defaultValue={department.name} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="manager">Manager</Label>
-                        <Input id="manager" defaultValue={department.manager} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" defaultValue={department.email} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" defaultValue={department.phone} />
-                      </div>
-                      <div className="col-span-2 space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          defaultValue={department.description}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsEditDialogOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button onClick={() => setIsEditDialogOpen(false)}>
-                        Save Changes
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-
-            {/* Department Title Section */}
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {department.name}
-              </h1>
-              <p className="text-muted-foreground">
-                DEPT-{department.id.toString().padStart(3, "0")} • Managed by{" "}
-                {department.manager || "N/A"}
-              </p>
-            </div>
-          </div>
-
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Total Equipment
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {department.equipment_count || allEquipment.length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      In this department
-                    </p>
-                  </div>
-                  <Package className="h-8 w-8 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Active Maintenance
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {department.active_maintenance_count ||
-                        departmentMaintenance.filter(
-                          (m: any) =>
-                            m.status === "scheduled" ||
-                            m.status === "in-progress"
-                        ).length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Scheduled & In Progress
-                    </p>
-                  </div>
-                  <Wrench className="h-8 w-8 text-yellow-500" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Equipment Value
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      GHS{" "}
-                      {(
-                        department.total_value ||
-                        allEquipment.reduce(
-                          (sum: number, eq: any) =>
-                            sum + (eq.purchase_cost || 0),
-                          0
-                        )
-                      ).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Total asset value
-                    </p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content Tabs */}
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="subunits">Sub-units</TabsTrigger>
-              <TabsTrigger value="equipment">Equipment</TabsTrigger>
-              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-              <TabsTrigger value="activities">Activities</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Building className="h-5 w-5" />
-                      <span>Department Information</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Department ID
-                        </p>
-                        <p className="font-medium text-foreground">
-                          DEPT-{department.id.toString().padStart(3, "0")}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Manager
-                        </p>
-                        <p className="font-medium text-foreground">
-                          {department.manager || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Sub-Units
-                        </p>
-                        <p className="font-medium text-foreground">
-                          {subUnits.length}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Equipment
-                        </p>
-                        <p className="font-medium text-foreground">
-                          {allEquipment.length} items
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Contact Information
-                      </p>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-sm text-foreground">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span>{department.email || "N/A"}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-foreground">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span>{department.phone || "N/A"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Package className="h-5 w-5" />
-                      <span>Equipment Overview</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Total Equipment
-                        </p>
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                          {allEquipment.length}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Total Value
-                        </p>
-                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                          GHS{" "}
-                          {allEquipment
-                            .reduce(
-                              (sum: number, eq: any) =>
-                                sum + (eq.purchase_cost || 0),
-                              0
-                            )
-                            .toLocaleString()}
-                        </p>
-                      </div>
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/departments">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Departments
+              </Button>
+            </Link>
+            <div className="flex items-center space-x-2">
+              <Dialog
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Department
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      Edit Department - {department.name}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Department Name</Label>
+                      <Input id="name" defaultValue={department.name} />
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Equipment by Sub-Unit
-                      </p>
-                      {subUnits.length > 0 ? (
-                        subUnits.slice(0, 4).map((subUnit: any) => (
-                          <div
-                            key={subUnit.id}
-                            className="flex justify-between text-sm"
-                          >
-                            <span className="text-muted-foreground truncate">
-                              {subUnit.name}
-                            </span>
-                            <span className="font-medium text-foreground ml-2">
-                              {subUnit.equipmentCount} items
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No sub-units
-                        </p>
-                      )}
-                      {subUnits.length > 4 && (
-                        <p className="text-xs text-muted-foreground pt-1">
-                          +{subUnits.length - 4} more sub-units
-                        </p>
-                      )}
+                      <Label htmlFor="manager">Manager</Label>
+                      <Input id="manager" defaultValue={department.manager} />
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-foreground">
-                    {department.description || "No description available."}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="subunits" className="space-y-6">
-              {/* Header with Stats */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground">
-                    Sub-units Management
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Manage organizational units within {department.name}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="hidden sm:flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-muted-foreground">
-                        {subUnits.length} Units
-                      </span>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" defaultValue={department.email} />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Package className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {subUnits.reduce(
-                          (sum, unit) => sum + unit.equipmentCount,
-                          0
-                        )}{" "}
-                        Equipment
-                      </span>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input id="phone" defaultValue={department.phone} />
+                    </div>
+                    <div className="col-span-2 space-y-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        defaultValue={department.description}
+                      />
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      if (await requestUnlock()) setIsAddSubUnitDialogOpen(true);
-                    }}
-                    className="shadow-sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Sub-unit
-                  </Button>
-                </div>
-              </div>
-
-            
-
-              {/* Sub-units Table */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" />
-                      Sub-units Directory
-                    </CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {subUnits.length} units
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b border-border hover:bg-transparent">
-                          <TableHead className="w-[250px] pl-6">
-                            Sub-unit
-                          </TableHead>
-                          <TableHead className="text-center">
-                            Equipment
-                          </TableHead>
-                          <TableHead className="text-center w-[100px]">
-                            Actions
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {subUnits.map((subUnit) => (
-                          <TableRow
-                            key={subUnit.id}
-                            className="hover:bg-muted/50 border-b border-border/50"
-                          >
-                            <TableCell className="pl-6">
-                              <div>
-                                <div className="font-medium text-foreground">
-                                  {subUnit.name}
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-0.5">
-                                  {subUnit.description}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <Package className="h-3 w-3 text-muted-foreground" />
-                                <span className="font-medium">
-                                  {subUnit.equipmentCount}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center justify-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => {
-                                    setSelectedSubUnit(subUnit);
-                                    setIsViewSubUnitDialogOpen(true);
-                                  }}
-                                >
-                                  <Eye className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => {
-                                    setSelectedSubUnit(subUnit);
-                                    setIsEditSubUnitDialogOpen(true);
-                                  }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Empty State */}
-              {subUnits.length === 0 && (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">
-                      No Sub-units Yet
-                    </h3>
-                    <p className="text-muted-foreground text-center mb-6 max-w-md">
-                      Start organizing your department by creating sub-units.
-                      This helps manage equipment and staff more effectively.
-                    </p>
+                  <div className="flex justify-end space-x-2">
                     <Button
-                      onClick={async () => {
-                        if (await requestUnlock()) setIsAddSubUnitDialogOpen(true);
-                      }}
+                      variant="outline"
+                      onClick={() => setIsEditDialogOpen(false)}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create First Sub-unit
+                      Cancel
                     </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+                    <Button onClick={() => setIsEditDialogOpen(false)}>
+                      Save Changes
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
 
-            <TabsContent value="equipment" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Department Equipment</h3>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePrint}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleExport}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Equipment
-                  </Button>
+          {/* Department Title Section */}
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {department.name}
+            </h1>
+            <p className="text-muted-foreground">
+              DEPT-{department.id.toString().padStart(3, "0")} • Managed by{" "}
+              {department.manager || "N/A"}
+            </p>
+          </div>
+        </div>
+
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Equipment
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {department.equipment_count || allEquipment.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    In this department
+                  </p>
                 </div>
+                <Package className="h-8 w-8 text-blue-500" />
               </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Active Maintenance
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {department.active_maintenance_count ||
+                      departmentMaintenance.filter(
+                        (m: any) =>
+                          m.status === "scheduled" ||
+                          m.status === "in-progress",
+                      ).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Scheduled & In Progress
+                  </p>
+                </div>
+                <Wrench className="h-8 w-8 text-yellow-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Equipment Value
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    GHS{" "}
+                    {(
+                      department.total_value ||
+                      allEquipment.reduce(
+                        (sum: number, eq: any) => sum + (eq.purchase_cost || 0),
+                        0,
+                      )
+                    ).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Total asset value
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              {/* Search Bar */}
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="subunits">Sub-units</TabsTrigger>
+            <TabsTrigger value="equipment">Equipment</TabsTrigger>
+            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger value="activities">Activities</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardContent className="pt-6">
-                  <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Search equipment by name or sub-unit..."
-                      value={equipmentSearchTerm}
-                      onChange={(e) => {
-                        setEquipmentSearchTerm(e.target.value);
-                        setCurrentPage(1); // Reset to first page on search
-                      }}
-                      className="pl-10"
-                    />
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Building className="h-5 w-5" />
+                    <span>Department Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Department ID
+                      </p>
+                      <p className="font-medium text-foreground">
+                        DEPT-{department.id.toString().padStart(3, "0")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Manager
+                      </p>
+                      <p className="font-medium text-foreground">
+                        {department.manager || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Sub-Units
+                      </p>
+                      <p className="font-medium text-foreground">
+                        {subUnits.length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Equipment
+                      </p>
+                      <p className="font-medium text-foreground">
+                        {allEquipment.length} items
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      Contact Information
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-sm text-foreground">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{department.email || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm text-foreground">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{department.phone || "N/A"}</span>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
-                  <div className="min-w-full overflow-x-auto">
-                    <Table className="text-xs md:text-sm">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-16">#</TableHead>
-                          <TableHead
-                            className="cursor-pointer hover:bg-muted select-none"
-                            onClick={() => handleSort("name")}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span>Name</span>
-                              {getSortIcon("name")}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
-                            onClick={() => handleSort("subUnit")}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span>Sub-unit</span>
-                              {getSortIcon("subUnit")}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
-                            onClick={() => handleSort("status")}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span>Status</span>
-                              {getSortIcon("status")}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
-                            onClick={() => handleSort("last_service_date")}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span>Last Maintenance</span>
-                              {getSortIcon("last_service_date")}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
-                            onClick={() => handleSort("created_at")}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span>Date Added</span>
-                              {getSortIcon("created_at")}
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
-                            onClick={() => handleSort("purchase_cost")}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <span>Value</span>
-                              {getSortIcon("purchase_cost")}
-                            </div>
-                          </TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentEquipment.length > 0 ? (
-                          currentEquipment.map(
-                            (equipment: any, index: number) => (
-                              <TableRow
-                                key={equipment.id}
-                                className="cursor-pointer hover:bg-gray-50 dark:hover:bg-accent transition-colors"
-                                onClick={() =>
-                                  (window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`)
-                                }
-                              >
-                                <TableCell className="text-gray-500">
-                                  {startIndex + index + 1}
-                                </TableCell>
-                                <TableCell>
-                                  <div>
-                                    <div className="font-medium">
-                                      {equipment.name}
-                                    </div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      {equipment.manufacturer}{" "}
-                                      {equipment.model || ""}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div>
-                                    <div className="font-medium">
-                                      {equipment.subUnit || (
-                                        <span className="text-gray-400 dark:text-gray-400 italic">
-                                          Not Specified
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      Tag:{" "}
-                                      {equipment.tagNumber ||
-                                        equipment.tag_number ||
-                                        "Not Specified"}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    className={getStatusColor(
-                                      equipment.status || "unknown"
-                                    )}
-                                  >
-                                    {equipment.status
-                                      ? equipment.status
-                                          .charAt(0)
-                                          .toUpperCase() +
-                                        equipment.status.slice(1)
-                                      : "Unknown"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {equipment.last_service_date ? (
-                                    new Date(
-                                      equipment.last_service_date
-                                    ).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                    })
-                                  ) : (
-                                    <span className="text-gray-400 dark:text-gray-400 italic">
-                                      Not Set
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {equipment.created_at ? (
-                                    new Date(
-                                      equipment.created_at
-                                    ).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                    })
-                                  ) : (
-                                    <span className="text-gray-400 italic">
-                                      Not Available
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {equipment.purchase_cost ||
-                                  equipment.purchaseCost ? (
-                                    `GHS ${Number(
-                                      equipment.purchase_cost ||
-                                        equipment.purchaseCost
-                                    ).toLocaleString()}`
-                                  ) : (
-                                    <span className="text-gray-400 italic">
-                                      Not Set
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center space-x-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`;
-                                      }}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger
-                                        asChild
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <Button variant="ghost" size="sm">
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        {/* Status Change Options */}
-                                        {[
-                                          "operational",
-                                          "maintenance",
-                                          "broken",
-                                          "retired",
-                                        ].map((status) => {
-                                          const isCurrentStatus =
-                                            equipment.status === status;
-                                          const getTextColor = (s: string) => {
-                                            switch (s.toLowerCase()) {
-                                              case "operational":
-                                                return "text-green-600";
-                                              case "maintenance":
-                                                return "text-yellow-600";
-                                              case "broken":
-                                                return "text-red-600";
-                                              case "retired":
-                                                return "text-gray-600";
-                                              default:
-                                                return "text-gray-600";
-                                            }
-                                          };
-                                          return (
-                                            <DropdownMenuItem
-                                              key={status}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleStatusUpdate(
-                                                  equipment.id,
-                                                  status
-                                                );
-                                              }}
-                                              className={`flex items-center justify-between cursor-pointer ${
-                                                isCurrentStatus
-                                                  ? "bg-gray-100"
-                                                  : ""
-                                              }`}
-                                            >
-                                              <span
-                                                className={getTextColor(status)}
-                                              >
-                                                {status
-                                                  .charAt(0)
-                                                  .toUpperCase() +
-                                                  status.slice(1)}
-                                                {isCurrentStatus && " ✓"}
-                                              </span>
-                                            </DropdownMenuItem>
-                                          );
-                                        })}
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`;
-                                          }}
-                                        >
-                                          <Edit className="h-4 w-4 mr-2" />
-                                          View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            // Add delete functionality here if needed
-                                          }}
-                                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Package className="h-5 w-5" />
+                    <span>Equipment Overview</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Total Equipment
+                      </p>
+                      <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {allEquipment.length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Total Value
+                      </p>
+                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                        GHS{" "}
+                        {allEquipment
+                          .reduce(
+                            (sum: number, eq: any) =>
+                              sum + (eq.purchase_cost || 0),
+                            0,
                           )
-                        ) : (
-                          <TableRow>
-                            <TableCell
-                              colSpan={8}
-                              className="text-center py-6 text-muted-foreground"
-                            >
-                              {equipmentSearchTerm
-                                ? "No equipment found"
-                                : "No equipment in this department"}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                          .toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-
-                  {/* Pagination */}
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-600">
-                      Showing{" "}
-                      {filteredEquipment.length > 0 ? startIndex + 1 : 0} to{" "}
-                      {Math.min(endIndex, filteredEquipment.length)} of{" "}
-                      {filteredEquipment.length} equipment
-                      {equipmentSearchTerm &&
-                        ` (filtered from ${allEquipment.length} total)`}
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
-                      </Button>
-                      <span className="text-sm">
-                        Page {currentPage} of {totalPages || 1}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Equipment by Sub-Unit
+                    </p>
+                    {subUnits.length > 0 ? (
+                      subUnits.slice(0, 4).map((subUnit: any) => (
+                        <div
+                          key={subUnit.id}
+                          className="flex justify-between text-sm"
+                        >
+                          <span className="text-muted-foreground truncate">
+                            {subUnit.name}
+                          </span>
+                          <span className="font-medium text-foreground ml-2">
+                            {subUnit.equipmentCount} items
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No sub-units
+                      </p>
+                    )}
+                    {subUnits.length > 4 && (
+                      <p className="text-xs text-muted-foreground pt-1">
+                        +{subUnits.length - 4} more sub-units
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="maintenance" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">
-                  Maintenance Activities
+            <Card>
+              <CardHeader>
+                <CardTitle>Description</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-foreground">
+                  {department.description || "No description available."}
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="subunits" className="space-y-6">
+            {/* Header with Stats */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-foreground">
+                  Sub-units Management
                 </h3>
-                <Button size="sm">
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage organizational units within {department.name}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-muted-foreground">
+                      {subUnits.length} Units
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Package className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {subUnits.reduce(
+                        (sum, unit) => sum + unit.equipmentCount,
+                        0,
+                      )}{" "}
+                      Equipment
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    if (await requestUnlock()) setIsAddSubUnitDialogOpen(true);
+                  }}
+                  className="shadow-sm"
+                >
                   <Plus className="h-4 w-4 mr-2" />
-                  Schedule Maintenance
+                  Add Sub-unit
                 </Button>
               </div>
+            </div>
 
-              <Card>
-                <CardContent className="pt-6">
+            {/* Sub-units Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Sub-units Directory
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    {subUnits.length} units
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
+                      <TableRow className="border-b border-border hover:bg-transparent">
+                        <TableHead className="w-[250px] pl-6">
+                          Sub-unit
+                        </TableHead>
+                        <TableHead className="text-center">Equipment</TableHead>
+                        <TableHead className="text-center w-[100px]">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subUnits.map((subUnit) => (
+                        <TableRow
+                          key={subUnit.id}
+                          className="hover:bg-muted/50 border-b border-border/50"
+                        >
+                          <TableCell className="pl-6">
+                            <div>
+                              <div className="font-medium text-foreground">
+                                {subUnit.name}
+                              </div>
+                              <div className="text-sm text-muted-foreground mt-0.5">
+                                {subUnit.description}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Package className="h-3 w-3 text-muted-foreground" />
+                              <span className="font-medium">
+                                {subUnit.equipmentCount}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setSelectedSubUnit(subUnit);
+                                  setIsViewSubUnitDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => {
+                                  setSelectedSubUnit(subUnit);
+                                  setIsEditSubUnitDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Empty State */}
+            {subUnits.length === 0 && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    No Sub-units Yet
+                  </h3>
+                  <p className="text-muted-foreground text-center mb-6 max-w-md">
+                    Start organizing your department by creating sub-units. This
+                    helps manage equipment and staff more effectively.
+                  </p>
+                  <Button
+                    onClick={async () => {
+                      if (await requestUnlock())
+                        setIsAddSubUnitDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Sub-unit
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="equipment" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Department Equipment</h3>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Equipment
+                </Button>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search equipment by name or sub-unit..."
+                    value={equipmentSearchTerm}
+                    onChange={(e) => {
+                      setEquipmentSearchTerm(e.target.value);
+                      setCurrentPage(1); // Reset to first page on search
+                    }}
+                    className="pl-10"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="min-w-full overflow-x-auto">
+                  <Table className="text-xs md:text-sm">
+                    <TableHeader>
                       <TableRow>
-                        <TableHead>Task ID</TableHead>
-                        <TableHead>Equipment</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Scheduled Date</TableHead>
-                        <TableHead>Technician</TableHead>
+                        <TableHead className="w-16">#</TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted select-none"
+                          onClick={() => handleSort("name")}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span>Name</span>
+                            {getSortIcon("name")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
+                          onClick={() => handleSort("subUnit")}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span>Sub-unit</span>
+                            {getSortIcon("subUnit")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
+                          onClick={() => handleSort("status")}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span>Status</span>
+                            {getSortIcon("status")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
+                          onClick={() => handleSort("last_service_date")}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span>Last Maintenance</span>
+                            {getSortIcon("last_service_date")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
+                          onClick={() => handleSort("created_at")}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span>Date Added</span>
+                            {getSortIcon("created_at")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-accent select-none"
+                          onClick={() => handleSort("purchase_cost")}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span>Value</span>
+                            {getSortIcon("purchase_cost")}
+                          </div>
+                        </TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {departmentMaintenance.length > 0 ? (
-                        departmentMaintenance.map((activity: any) => (
-                          <TableRow key={activity.id}>
-                            <TableCell className="font-medium">
-                              MT-{activity.id.toString().padStart(3, "0")}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">
-                                  {activity.equipment_name || "N/A"}
+                      {currentEquipment.length > 0 ? (
+                        currentEquipment.map(
+                          (equipment: any, index: number) => (
+                            <TableRow
+                              key={equipment.id}
+                              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-accent transition-colors"
+                              onClick={() =>
+                                (window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`)
+                              }
+                            >
+                              <TableCell className="text-gray-500">
+                                {startIndex + index + 1}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">
+                                    {equipment.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    {equipment.manufacturer}{" "}
+                                    {equipment.model || ""}
+                                  </div>
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                  EQ-
-                                  {activity.equipment_id
-                                    ?.toString()
-                                    .padStart(3, "0") || "N/A"}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">
+                                    {equipment.subUnit || (
+                                      <span className="text-gray-400 dark:text-gray-400 italic">
+                                        Not Specified
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    Tag:{" "}
+                                    {equipment.tagNumber ||
+                                      equipment.tag_number ||
+                                      "Not Specified"}
+                                  </div>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {activity.type
-                                ? activity.type.charAt(0).toUpperCase() +
-                                  activity.type.slice(1)
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={getStatusColor(
-                                  activity.status || "unknown"
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={getStatusColor(
+                                    equipment.status || "unknown",
+                                  )}
+                                >
+                                  {equipment.status
+                                    ? equipment.status.charAt(0).toUpperCase() +
+                                      equipment.status.slice(1)
+                                    : "Unknown"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {equipment.last_service_date ? (
+                                  new Date(
+                                    equipment.last_service_date,
+                                  ).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-400 italic">
+                                    Not Set
+                                  </span>
                                 )}
-                              >
-                                {activity.status
-                                  ? activity.status.charAt(0).toUpperCase() +
-                                    activity.status.slice(1).replace("-", " ")
-                                  : "Unknown"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={getPriorityColor(
-                                  activity.priority || "medium"
+                              </TableCell>
+                              <TableCell>
+                                {equipment.created_at ? (
+                                  new Date(
+                                    equipment.created_at,
+                                  ).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                ) : (
+                                  <span className="text-gray-400 italic">
+                                    Not Available
+                                  </span>
                                 )}
-                              >
-                                {activity.priority
-                                  ? activity.priority.charAt(0).toUpperCase() +
-                                    activity.priority.slice(1)
-                                  : "Medium"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {activity.date
-                                ? new Date(activity.date).toLocaleDateString()
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              {activity.technician || "Unassigned"}
-                            </TableCell>
-                            <TableCell>
-                              <Link href={`/maintenance/${activity.id}`}>
-                                <Button variant="ghost" size="sm">
-                                  View
-                                </Button>
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                              </TableCell>
+                              <TableCell>
+                                {equipment.purchase_cost ||
+                                equipment.purchaseCost ? (
+                                  `GHS ${Number(
+                                    equipment.purchase_cost ||
+                                      equipment.purchaseCost,
+                                  ).toLocaleString()}`
+                                ) : (
+                                  <span className="text-gray-400 italic">
+                                    Not Set
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`;
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                      asChild
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Button variant="ghost" size="sm">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {/* Status Change Options */}
+                                      {[
+                                        "operational",
+                                        "maintenance",
+                                        "broken",
+                                        "retired",
+                                      ].map((status) => {
+                                        const isCurrentStatus =
+                                          equipment.status === status;
+                                        const getTextColor = (s: string) => {
+                                          switch (s.toLowerCase()) {
+                                            case "operational":
+                                              return "text-green-600";
+                                            case "maintenance":
+                                              return "text-yellow-600";
+                                            case "broken":
+                                              return "text-red-600";
+                                            case "retired":
+                                              return "text-gray-600";
+                                            default:
+                                              return "text-gray-600";
+                                          }
+                                        };
+                                        return (
+                                          <DropdownMenuItem
+                                            key={status}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleStatusUpdate(
+                                                equipment.id,
+                                                status,
+                                              );
+                                            }}
+                                            className={`flex items-center justify-between cursor-pointer ${
+                                              isCurrentStatus
+                                                ? "bg-gray-100"
+                                                : ""
+                                            }`}
+                                          >
+                                            <span
+                                              className={getTextColor(status)}
+                                            >
+                                              {status.charAt(0).toUpperCase() +
+                                                status.slice(1)}
+                                              {isCurrentStatus && " ✓"}
+                                            </span>
+                                          </DropdownMenuItem>
+                                        );
+                                      })}
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.location.href = `/equipment/${equipment.id}?returnTo=/departments/${departmentId}&returnTab=equipment`;
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // Add delete functionality here if needed
+                                        }}
+                                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                        )
                       ) : (
                         <TableRow>
                           <TableCell
                             colSpan={8}
-                            className="text-center py-10 text-gray-500"
+                            className="text-center py-6 text-muted-foreground"
                           >
-                            No maintenance activities for this department
+                            {equipmentSearchTerm
+                              ? "No equipment found"
+                              : "No equipment in this department"}
                           </TableCell>
                         </TableRow>
                       )}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
 
-            <TabsContent value="activities" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-10 text-gray-500">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium">No recent activities</p>
-                    <p className="text-sm">
-                      Activity tracking will be available soon.
-                    </p>
+                {/* Pagination */}
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {filteredEquipment.length > 0 ? startIndex + 1 : 0}{" "}
+                    to {Math.min(endIndex, filteredEquipment.length)} of{" "}
+                    {filteredEquipment.length} equipment
+                    {equipmentSearchTerm &&
+                      ` (filtered from ${allEquipment.length} total)`}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <span className="text-sm">
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Maintenance Activities</h3>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Schedule Maintenance
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Task ID</TableHead>
+                      <TableHead>Equipment</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Scheduled Date</TableHead>
+                      <TableHead>Technician</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departmentMaintenance.length > 0 ? (
+                      departmentMaintenance.map((activity: any) => (
+                        <TableRow key={activity.id}>
+                          <TableCell className="font-medium">
+                            MT-{activity.id.toString().padStart(3, "0")}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {activity.equipment_name || "N/A"}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                EQ-
+                                {activity.equipment_id
+                                  ?.toString()
+                                  .padStart(3, "0") || "N/A"}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {activity.type
+                              ? activity.type.charAt(0).toUpperCase() +
+                                activity.type.slice(1)
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={getStatusColor(
+                                activity.status || "unknown",
+                              )}
+                            >
+                              {activity.status
+                                ? activity.status.charAt(0).toUpperCase() +
+                                  activity.status.slice(1).replace("-", " ")
+                                : "Unknown"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={getPriorityColor(
+                                activity.priority || "medium",
+                              )}
+                            >
+                              {activity.priority
+                                ? activity.priority.charAt(0).toUpperCase() +
+                                  activity.priority.slice(1)
+                                : "Medium"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {activity.date
+                              ? new Date(activity.date).toLocaleDateString()
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {activity.technician || "Unassigned"}
+                          </TableCell>
+                          <TableCell>
+                            <Link href={`/maintenance/${activity.id}`}>
+                              <Button variant="ghost" size="sm">
+                                View
+                              </Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-10 text-gray-500 dark:text-gray-400"
+                        >
+                          No maintenance activities for this department
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activities" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activities</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-10 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg font-medium">No recent activities</p>
+                  <p className="text-sm">
+                    Activity tracking will be available soon.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add Sub-unit Dialog */}
@@ -1842,27 +1828,27 @@ function DepartmentDetailSkeleton() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <Skeleton className="h-10 w-96" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="pt-6">
-                  <Skeleton className="h-24 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-96 w-full" />
-            </CardContent>
-          </Card>
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-10 w-96" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <Skeleton className="h-24 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-96 w-full" />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

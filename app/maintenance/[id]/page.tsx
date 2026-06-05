@@ -27,12 +27,24 @@ import {
   DollarSign,
   Camera,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { MaintenanceRecord } from "@/types/maintenance";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ChecklistItem = {
   id: number;
@@ -71,11 +83,14 @@ export default function MaintenanceDetailPage({
   const { id } = use(params);
   const maintenanceId = parseInt(id);
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [newNote, setNewNote] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isAddingPart, setIsAddingPart] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [newPart, setNewPart] = useState({ part: "", quantity: "", cost: "" });
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: maintenance, isLoading } = useQuery<MaintenanceRecord | undefined>(
     {
@@ -119,6 +134,28 @@ export default function MaintenanceDetailPage({
   const invalidateMaintenance = () => {
     queryClient.invalidateQueries({ queryKey: ["maintenance", maintenanceId] });
     queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+  };
+
+  const handleDeleteMaintenance = async () => {
+    setIsDeleting(true);
+    try {
+      await api.maintenance.delete(maintenanceId);
+      await queryClient.invalidateQueries({ queryKey: ["maintenance", maintenanceId] });
+      await queryClient.invalidateQueries({ queryKey: ["maintenance"] });
+      await queryClient.invalidateQueries({ queryKey: ["maintenanceHistory"] });
+      await queryClient.invalidateQueries({ queryKey: ["maintenanceRequests"] });
+      await queryClient.invalidateQueries({ queryKey: ["upcomingMaintenance"] });
+      await queryClient.invalidateQueries({ queryKey: ["healthStats"] });
+      toast.success("Maintenance record deleted");
+      setIsDeleteDialogOpen(false);
+      router.push("/maintenance");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete maintenance record"
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleStatusChange = async (status: string) => {
@@ -319,8 +356,57 @@ export default function MaintenanceDetailPage({
                 Start Task
               </Button>
             )}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
           </div>
         </div>
+
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete maintenance record</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete{" "}
+                {maintenance
+                  ? `MT-${maintenance.id
+                      .toString()
+                      .padStart(3, "0")} - ${
+                      maintenance.equipment_name || "this record"
+                    }`
+                  : "this record"}{" "}
+                ? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteMaintenance}
+                disabled={isDeleting}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Card className="mb-6">
           <CardContent className="pt-6">
