@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
       (result[0] as { current_time?: string })?.current_time ??
       new Date().toISOString();
 
+    console.log(`[cron/db-ping] Supabase ping successful at ${timestamp}`);
+
     return NextResponse.json({ success: true, timestamp });
   } catch (error) {
     console.error("DB ping failed:", error);
